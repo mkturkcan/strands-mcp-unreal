@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\agent_test.py\" --prompt \"Run around.\")",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\server.py\")",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\agent_test.py\" --prompt \"Jump three times, then turn around 180 degrees and wave.\")",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\agent_test.py\" --prompt \"Find something interesting to look at and describe what you see.\")",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\persona_agent.py\" --persona \"Explorer\" --duration 60 --traits \"{\"\"archetype\"\": \"\"explorer\"\", \"\"base_emotion\"\": \"\"excited\"\", \"\"personality\"\": \"\"Adventurous spirit who loves discovering new places\"\", \"\"goals\"\": [\"\"explore\"\", \"\"climb\"\", \"\"discover secrets\"\"]}\")",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\persona_agent.py\" --persona \"Explorer\" --duration 30 --traits \"{\"\"archetype\"\": \"\"explorer\"\", \"\"base_emotion\"\": \"\"excited\"\", \"\"personality\"\": \"\"Adventurous spirit who loves discovering new places\"\", \"\"goals\"\": [\"\"explore\"\", \"\"climb\"\", \"\"discover secrets\"\"]}\")",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\persona_agent.py\" --persona \"Dreamer\" --duration 30 --traits \"{\"\"archetype\"\": \"\"wanderer\"\", \"\"base_emotion\"\": \"\"whimsical\"\", \"\"personality\"\": \"\"A dreamy soul who sees magic in everything\"\", \"\"goals\"\": [\"\"find beauty\"\", \"\"contemplate existence\"\", \"\"follow butterflies\"\"]}\")",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\persona_agent.py\" --help)",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\persona_agent.py\" --persona \"Guardian\" --duration 45)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

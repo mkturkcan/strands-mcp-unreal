@@ -1,0 +1,26 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Strands Input Server",
+  "Description": "Lightweight in-game TCP JSON command server to control Character movement/look/jump/sprint. Works in PIE and packaged builds.",
+  "Category": "Runtime",
+  "CreatedBy": "Cline",
+  "CreatedByURL": "https://example.com",
+  "DocsURL": "",
+  "EnabledByDefault": false,
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "SupportURL": "",
+  "Modules": [
+    {
+      "Name": "StrandsInputServer",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "SupportedTargetPlatforms": [
+    "Win64",
+    "Linux"
+  ]
+}

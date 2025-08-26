@@ -1,0 +1,110 @@
+# Unreal Engine .gitignore - Keep only Strands MCP components
+
+# ===== UNREAL ENGINE GENERATED/LARGE FILES =====
+# Binaries and build artifacts
+**/Binaries/
+**/Intermediate/
+**/Build/
+**/DerivedDataCache/
+
+# Content (massive UE assets) - exclude everything except specific exceptions
+**/Content/
+# Exception: Keep any Content related to Strands if it exists
+!**/Content/*Strands*/
+!**/Content/*MCP*/
+
+# Saved data and caches
+**/Saved/
+# Exception: Keep specific Strands output directories
+!**/Saved/OBS/
+!**/Saved/PersonaStates/
+
+# Platform-specific directories
+**/Platforms/
+
+# Large asset files by extension
+*.uasset
+*.umap
+*.pak
+*.bulk
+*.uexp
+*.ubulk
+*.uptnl
+*.ufont
+*.ubn
+*.ushaderbytecode
+
+# Large zip files (> 100MB GitHub limit)
+CitySample_HoudiniFiles.zip
+
+# ===== KEEP STRANDS-SPECIFIC COMPONENTS =====
+# Core Strands directories and files (force include with !)
+!CitySample/Tools/StrandsMCP/
+!CitySample/Tools/StrandsMCP/**
+!CitySample/Tools/StrandsInputClient/
+!CitySample/Tools/StrandsInputClient/**
+!Tools/StrandsInputClient/
+!Tools/StrandsInputClient/**
+!Plugins/StrandsInputServer/
+!Plugins/StrandsInputServer/**
+
+# Project files we want to keep
+!*.uproject
+!CitySample.uproject
+!MyProject.uproject
+
+# Configuration files
+!**/Config/
+!**/Config/**
+
+# Source code
+!**/Source/
+!**/Source/**
+
+# Python files
+!**/*.py
+!**/*.ps1
+
+# Documentation and config
+!README.md
+!CLAUDE.md
+!run_persona.ps1
+
+# ===== PYTHON/DEVELOPMENT =====
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments (but not UE's PipInstall)
+venv/
+env/
+.env
+
+# ===== AWS/TERRAFORM =====
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+
+# AWS
+.aws/
+
+# ===== MISC =====
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Null files
+nul

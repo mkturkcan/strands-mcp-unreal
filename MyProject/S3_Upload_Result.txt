@@ -1,0 +1,5 @@
+﻿Status: Success
+Bucket: strands-input-server-ue56-20250819021440-80524
+Key: strands/StrandsInputServer-UE5.6-0.1.0.zip
+Region: us-east-1
+S3 URI: s3://strands-input-server-ue56-20250819021440-80524/strands/StrandsInputServer-UE5.6-0.1.0.zip

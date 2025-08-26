@@ -1,0 +1,54 @@
+{
+  "strands_module": "C:\\Users\\Administrator\\Documents\\Unreal Projects\\MyProject\\Intermediate\\PipInstall\\Lib\\site-packages\\strands\\__init__.py",
+  "has_Agent_top_level": false,
+  "dir_strands_sample": [
+    "Circle",
+    "Domain2D",
+    "DomainTransform",
+    "Eigenfunction2D",
+    "Path",
+    "PerDirectionMatrixXs",
+    "PerDirectionVectorXs",
+    "Rectangle",
+    "Schrodinger2D",
+    "Union",
+    "build_extension_env",
+    "contextmanager",
+    "os",
+    "strands"
+  ],
+  "submodules": {
+    "strands.agent": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'strands.agent'"
+    },
+    "strands.agents": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'strands.agents'"
+    },
+    "strands.core": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'strands.core'"
+    },
+    "strands.runtime": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'strands.runtime'"
+    },
+    "strands.api": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'strands.api'"
+    },
+    "strands.tools": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'strands.tools'"
+    },
+    "strands.tools.mcp": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'strands.tools'"
+    }
+  },
+  "mcp_client": {
+    "ok": false,
+    "error": "ModuleNotFoundError: No module named 'strands.tools'"
+  }
+}
