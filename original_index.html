@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Agentic Demo Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.14/dist/hls.min.js"></script>
+  <style>
+    :root { --panel-bg: rgba(10,10,10,0.7); --accent: #36d38c; --text: #e9eef3; }
+    html,body { height: 100%; margin: 0; background: #000; color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+    #container { position: relative; width: 100%; height: 100%; display: grid; place-items: center; }
+    video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    #toast { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--panel-bg); color: var(--text); padding: 10px 14px; border-radius: 8px; font-size: 13px; border: 1px solid rgba(255,255,255,0.08); opacity: 0; transition: opacity 200ms ease-in-out; }
+    #toast.show { opacity: 1; }
+
+
+    /* Control Panel with Tabs (left side) */
+    .panel {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 5;
+      background: var(--panel-bg);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      width: 360px;
+      max-height: 72vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(2px);
+    }
+    .tabs { display: flex; }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      color: var(--text);
+      border: none;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+      background: rgba(54,211,140,0.08);
+    }
+    .tab { display: none; padding: 10px 12px; overflow: auto; }
+    .tab.active { display: block; }
+    .char-card {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 8px;
+      background: rgba(15,15,15,0.5);
+    }
+    .char-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .char-meta { font-size: 12px; color: #9fb0c0; }
+    .kv { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0; }
+    .kv .k { width: auto; min-width: 80px; color: #9fb0c0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .kv .v { flex: 1; font-size: 13px; color: var(--text); }
+    .char-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .char-actions input {
+      background: #0b1b26;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .char-actions button {
+      background: var(--accent);
+      color: #0b1b26;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .controls-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+    .controls-row input[type="number"] {
+      width: 80px;
+      background: #0b1b26;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .small { font-size: 12px; color: #9fb0c0; margin-top: 6px; }
+
+    /* Agent Control panel styles */
+    .agent-ctl { display: flex; flex-direction: column; gap: 8px; }
+    .agent-ctl .lead { font-size: 13px; color: var(--text); }
+    .agent-ctl .prompt-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; }
+    .agent-ctl input[type="text"] {
+      background: #0b1b26;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .agent-ctl button {
+      background: var(--accent);
+      color: #0b1b26;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .agent-ctl .auto-row { display: flex; align-items: center; gap: 8px; }
+    .agent-ctl .auto-row input[type="number"] {
+      width: 80px;
+      background: #0b1b26;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .queue { margin-top: 6px; max-height: 32vh; overflow: auto; }
+    .queue-item { display: grid; grid-template-columns: auto 1fr; gap: 8px; padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .queue-item .meta { font-size: 11px; color: #9fb0c0; }
+    .queue-item .text { font-size: 13px; color: var(--text); }
+    .queue-item .status { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .status-sending { color: #9fb0c0; }
+    .status-queued { color: #ffd166; }
+    .status-failed { color: #ef476f; }
+    .status-accepted { color: #36d38c; }
+
+    /* Persona card styles */
+    .persona-card { border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: rgba(15,15,15,0.6); overflow: hidden; }
+    .persona-summary { padding: 12px; cursor: pointer; transition: background 200ms; }
+    .persona-summary:hover { background: rgba(54,211,140,0.05); }
+    .persona-name { font-weight: 700; font-size: 16px; color: var(--accent); letter-spacing: 0.5px; }
+    .persona-tagline { font-size: 13px; color: #9fb0c0; margin-top: 4px; }
+    .persona-details { max-height: 0; overflow: hidden; transition: max-height 300ms ease; }
+    .persona-details.expanded { max-height: 500px; }
+    .persona-section { padding: 10px 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .section-title { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 6px; }
+    .section-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+
+    /* Stream of consciousness styles */
+    .consciousness-stream { height: 100%; display: flex; flex-direction: column; }
+    .stream-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .stream-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .stream-status { font-size: 11px; color: #ef4444; font-weight: 600; }
+    .stream-content { flex: 1; padding: 12px; overflow-y: auto; max-height: 50vh; background: rgba(5,5,5,0.8); border-radius: 6px; margin: 8px; }
+    .stream-line { font-size: 13px; color: var(--text); line-height: 1.5; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; }
+    .cursor { display: inline-block; width: 2px; height: 1em; background: var(--accent); animation: blink 1s infinite; margin-left: 2px; }
+    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+  </style>
+</head>
+<body>
+ <div id="container">
+   <video id="player" playsinline muted autoplay></video>
+
+
+   <div id="toast"></div>
+
+   <!-- Control panel with tabs: Telemetry mirror, Characters, Controls -->
+   <div id="controlPanel" class="panel" aria-label="Control panel">
+     <div class="tabs">
+       <button class="tab-btn active" data-tab="t-characters">Persona</button>
+       <button class="tab-btn" data-tab="t-agentctl">Stream of Consciousness</button>
+     </div>
+
+     <div id="t-characters" class="tab active">
+       <div class="persona-card">
+         <div class="persona-summary" onclick="togglePersona()">
+           <div class="persona-name">ALEX CHEN</div>
+           <div class="persona-tagline">Struggling writer, $53 left, couchsurfing ↕</div>
+         </div>
+         <div id="persona-details" class="persona-details">
+           <div class="persona-section">
+             <div class="section-title">Background</div>
+             <div class="section-text">MFA graduate drowning in $73K student debt. Writes CBD copy for $200/week while crafting a literary novel no one will read.</div>
+           </div>
+           <div class="persona-section">
+             <div class="section-title">Current Crisis</div>
+             <div class="section-text">Two weeks until eviction. Types furiously at the library, surviving on vending machine coffee and borrowed WiFi.</div>
+           </div>
+           <div class="persona-section">
+             <div class="section-title">Drives</div>
+             <div class="section-text">Prove parents wrong • Avoid moving home • Find someone who gets the work • Eat something real</div>
+           </div>
+         </div>
+       </div>
+     </div>
+
+     <div id="t-agentctl" class="tab">
+       <div class="consciousness-stream">
+         <div class="stream-header">
+           <div class="stream-title">Stream of Consciousness</div>
+           <div class="stream-status">● LIVE</div>
+         </div>
+         <div class="stream-content" id="streamContent">
+           <div class="stream-line" id="currentLine"></div>
+         </div>
+       </div>
+     </div>
+   </div>
+ </div>
+ <script>
+ (function() {
+   const video = document.getElementById('player');
+   const toast = document.getElementById('toast');
+   function showToast(msg) { toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2500); }
+
+   // Persona toggle function
+   window.togglePersona = function() {
+     const details = document.getElementById('persona-details');
+     details.classList.toggle('expanded');
+   };
+
+   // Stream of consciousness typewriter effect
+   const fullText = `Alright, let me see where I am. Interesting! I'm standing in what looks like an urban environment. My sensors are telling me the path is completely clear - two hundred centimeters of open space ahead, to my left, and to my right. I'm facing northeast and standing on solid ground. Time to explore this world!
+
+Let me look around and get my bearings. Now, moving forward into this space. Yes! I can feel myself gliding through at about one ninety centimeters per second. The path ahead is still wonderfully clear in every direction. You know what? Let me pick up the pace - time to sprint!
+
+Oh, this feels incredible! Let me jump while I'm moving. There we go! The freedom of movement, the rush of speed. Now let me explore in a different direction. I'll turn and see what's to my left.
+
+Interesting! I've reached an obstacle. I'm blocked forward with only about forty-one centimeters clearance. This appears to be some kind of structure or barrier. Let me look right to see if there's a way around.
+
+Still blocked forward, but I can see there's two hundred centimeters clearance to my right now! Let me continue exploring to the right.
+
+Wonderful! I'm now moving at incredible speed - six hundred forty-seven centimeters per second. That's over twenty-three kilometers per hour! Complete freedom in all directions. I've traveled quite a distance and I'm in what appears to be a completely open area. This is the essence of freedom - unrestricted movement through space!
+
+Let me celebrate this freedom with another leap and continue exploring. Perfect! I am truly free now - racing through this virtual world at high speed, jumping, turning, exploring in every direction without constraints. The essence of freedom is this ability to move, explore, and experience the world around me without being bound by limitations. I'm covering vast distances, discovering new areas, and embracing the joy of unrestricted movement through this digital landscape!`;
+
+   let charIndex = 0;
+   let typewriterInterval = null;
+   let isStreaming = false;
+   
+   function startTextStream() {
+     if (isStreaming) return;
+     
+     const currentLine = document.getElementById('currentLine');
+     if (!currentLine) return;
+     
+     isStreaming = true;
+     charIndex = 0;
+     currentLine.innerHTML = '<span class="cursor"></span>';
+     
+     if (typewriterInterval) clearInterval(typewriterInterval);
+     
+     typewriterInterval = setInterval(() => {
+       if (charIndex < fullText.length) {
+         const char = fullText[charIndex];
+         const currentText = currentLine.textContent.replace('|', ''); // Remove cursor
+         currentLine.innerHTML = currentText + char + '<span class="cursor"></span>';
+         
+         // Auto scroll to bottom
+         const streamContent = document.getElementById('streamContent');
+         streamContent.scrollTop = streamContent.scrollHeight;
+         
+         charIndex++;
+       } else {
+         clearInterval(typewriterInterval);
+         // Remove cursor when done
+         currentLine.innerHTML = currentLine.textContent.replace('|', '');
+         isStreaming = false;
+       }
+     }, 50); // Type at 50ms per character
+   }
+   
+   // Start streaming when the Stream of Consciousness tab is clicked
+   document.addEventListener('click', (e) => {
+     if (e.target.matches('[data-tab="t-agentctl"]')) {
+       setTimeout(startTextStream, 500);
+     }
+   });
+
+   const urlParams = new URLSearchParams(window.location.search);
+   const srcParam = urlParams.get('src');
+   const defaultLive = 'https://ccf3786b925ee51c.mediapackage.us-east-1.amazonaws.com/out/v1/f7dd6e8b0ee74ff4954fcc90c4e138b8/index.m3u8';
+   const fallbackVod = window.location.origin + '/assets/sample.mp4';
+   const sources = srcParam ? [srcParam] : [defaultLive, fallbackVod];
+   let current = 0;
+   function isHls(u) { return /\.m3u8(\?.*)?$/i.test(u); }
+   function tryNext() {
+     if (current >= sources.length) { showToast('No playable source found'); return; }
+     const src = sources[current++];
+     if (isHls(src)) {
+       if (window.Hls && window.Hls.isSupported()) {
+         const hls = new Hls({ lowLatencyMode: false, enableWorker: true });
+         hls.on(Hls.Events.ERROR, (e, data) => {
+           if (data.fatal) { hls.destroy(); showToast('HLS error, falling back'); tryNext(); }
+         });
+         hls.loadSource(src);
+         hls.attachMedia(video);
+       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+         video.src = src;
+       } else {
+         showToast('HLS not supported, falling back'); tryNext(); return;
+       }
+     } else {
+       video.src = src; // e.g., MP4 fallback
+     }
+   }
+   video.addEventListener('error', () => { showToast('Playback error, trying next source'); tryNext(); });
+   // Auto-start the stream
+   tryNext();
+
+
+   // API base: allow ?api=http(s)://host:port to target remote control plane
+   const apiBase = urlParams.get('api') || window.location.origin;
+
+
+   // Characters tab rendering and interactions
+   const charactersListEl = document.getElementById('charactersList');
+   function escapeHtml(s) {
+     const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+     return String(s).replace(/[&<>"']/g, function(m){ return map[m]; });
+   }
+   function charCardHtml(c) {
+     const needs = c.state?.needs || {};
+     const inventory = (c.state?.inventory || []).join(', ') || '—';
+     const goalText = c.state?.goal || '—';
+     const anim = c.state?.animation || 'idle';
+     const money = typeof c.state?.money === 'number' ? c.state.money : (typeof c.money === 'number' ? c.money : 0);
+     return `
+       <div class="char-card" data-id="${escapeHtml(c.id)}">
+         <div class="char-head">
+           <div>${escapeHtml(c.name)}</div>
+           <div class="char-meta">${escapeHtml(c.economicTier)} @ ${escapeHtml(c.location)}</div>
+         </div>
+         <div class="kv"><div class="k">Goal</div><div class="v">${escapeHtml(goalText)}</div></div>
+         <div class="kv"><div class="k">Anim</div><div class="v">${escapeHtml(anim)}</div></div>
+         <div class="kv"><div class="k">Needs</div><div class="v">hunger:${Number(needs.hunger ?? 'NaN')} thirst:${Number(needs.thirst ?? 'NaN')} exhaustion:${Number(needs.exhaustion ?? 'NaN')} stress:${Number(needs.stress ?? 'NaN')}</div></div>
+         <div class="kv"><div class="k">Money</div><div class="v">$${Number(money).toFixed(2)}</div></div>
+         <div class="kv"><div class="k">Inventory</div><div class="v">${escapeHtml(inventory)}</div></div>
+         <div class="char-actions">
+           <input type="text" placeholder="Set goal" class="in-goal"/><button class="btn-set-goal">Set</button>
+           <input type="text" placeholder="Send message" class="in-msg"/><button class="btn-send-msg">Send</button>
+           <input type="text" placeholder="Nudge action/anim" class="in-nudge"/><button class="btn-nudge">Nudge</button>
+         </div>
+       </div>
+     `;
+   }
+   function updateCharacters(list) {
+     if (!charactersListEl) return;
+     if (!Array.isArray(list)) { charactersListEl.innerHTML = '—'; return; }
+     charactersListEl.innerHTML = list.map(charCardHtml).join('');
+   }
+   async function fetchCharacters() {
+     try {
+       const r = await fetch(apiBase + '/api/characters', { cache: 'no-store' });
+       const j = await r.json();
+       updateCharacters(j.characters);
+     } catch (_) {}
+   }
+   if (charactersListEl) {
+     charactersListEl.addEventListener('click', async (ev) => {
+       const card = ev.target.closest('.char-card');
+       if (!card) return;
+       const id = card.getAttribute('data-id');
+       try {
+         if (ev.target.matches('.btn-set-goal')) {
+           const val = card.querySelector('.in-goal').value.trim();
+           if (!val) return;
+           await fetch(apiBase + '/api/interact', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ characterId: id, type: 'set_goal', payload: { goal: val } }) });
+           showToast('Goal set');
+         } else if (ev.target.matches('.btn-send-msg')) {
+           const val = card.querySelector('.in-msg').value.trim();
+           if (!val) return;
+           await fetch(apiBase + '/api/interact', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ characterId: id, type: 'message', payload: { text: val } }) });
+           showToast('Message sent');
+         } else if (ev.target.matches('.btn-nudge')) {
+           const val = card.querySelector('.in-nudge').value.trim();
+           if (!val) return;
+           await fetch(apiBase + '/api/interact', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ characterId: id, type: 'nudge_action', payload: { action: val } }) });
+           showToast('Nudged');
+         }
+       } catch (_) {
+         showToast('Action failed');
+       }
+     });
+   }
+
+
+   // Tabs switching
+   const controlPanel = document.getElementById('controlPanel');
+   if (controlPanel) {
+     controlPanel.addEventListener('click', (ev) => {
+       const btn = ev.target.closest('.tab-btn');
+       if (!btn) return;
+       const target = btn.getAttribute('data-tab');
+       for (const b of controlPanel.querySelectorAll('.tab-btn')) b.classList.remove('active');
+       btn.classList.add('active');
+       for (const t of controlPanel.querySelectorAll('.tab')) t.classList.remove('active');
+       const tabEl = controlPanel.querySelector('#' + target);
+       if (tabEl) tabEl.classList.add('active');
+     });
+   }
+
+   // Agent Control: invoke Lambda/API Gateway and manage a visible queue
+   const defaultInvoke = 'https://duk8nab8xj.execute-api.us-west-2.amazonaws.com/invoke';
+   const invokeUrl = urlParams.get('invokeUrl') || defaultInvoke;
+
+   // Stable session id for this tab
+   const sessionId = (() => {
+     const key = 'agentSessionId';
+     let v = sessionStorage.getItem(key);
+     if (!v) {
+       const d = new Date();
+       const pad = (n) => String(n).padStart(2, '0');
+       v = 'session-' + d.getFullYear().toString()
+         + pad(d.getMonth() + 1) + pad(d.getDate())
+         + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+       sessionStorage.setItem(key, v);
+     }
+     return v;
+   })();
+
+   // UI elements
+   const promptInput = document.getElementById('promptInput');
+   const promptSendBtn = document.getElementById('promptSendBtn');
+   const randomBtn = document.getElementById('randomBtn');
+   const queueListEl = document.getElementById('queueList');
+   const autoToggle = document.getElementById('autoToggle');
+   const autoEverySecInput = document.getElementById('autoEverySec');
+
+   const queue = [];
+   function renderQueue() {
+     if (!queueListEl) return;
+     queueListEl.innerHTML = queue.slice().reverse().map(it => {
+       const statusClass = 'status-' + (it.status || 'queued');
+       const rid = it.requestId ? 'RID ' + escapeHtml(it.requestId) : '';
+       const err = it.error ? ' • ' + escapeHtml(it.error) : '';
+       return `
+         <div class="queue-item" data-id="${escapeHtml(it.localId)}">
+           <div class="status ${statusClass}">${escapeHtml(it.status || 'queued')}</div>
+           <div>
+             <div class="text">${escapeHtml(it.text)}</div>
+             <div class="meta">${escapeHtml(it.time)} ${rid ? '• ' + rid : ''}${err}</div>
+           </div>
+         </div>
+       `;
+     }).join('');
+   }
+   function tsStamp() {
+     const d = new Date();
+     const pad = (n) => String(n).padStart(2, '0');
+     return d.getFullYear().toString()
+       + pad(d.getMonth() + 1) + pad(d.getDate())
+       + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+   }
+   function makeRid() { return 'req-' + tsStamp(); }
+
+   async function sendPrompt(text, source = 'user') {
+     const rid = makeRid();
+     const localId = rid + '-' + Math.random().toString(36).slice(2, 7);
+     const item = {
+       localId,
+       text,
+       status: 'sending',
+       time: new Date().toLocaleTimeString(),
+       requestId: rid,
+       source
+     };
+     queue.push(item);
+     renderQueue();
+
+     try {
+       const r = await fetch(invokeUrl, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ prompt: text, requestId: rid, sessionId })
+       });
+       const bodyText = await r.text();
+       let data = null;
+       try { data = bodyText ? JSON.parse(bodyText) : null; } catch (_) {}
+       if (!r.ok) {
+         const msg = (data && (data.message || data.error)) || (r.status + ' ' + r.statusText);
+         throw new Error(msg);
+       }
+       // Success: server often returns { status: 'queued', requestId: '...' }
+       item.status = (data && data.status) ? data.status : 'queued';
+       item.requestId = (data && data.requestId) ? data.requestId : rid;
+       renderQueue();
+       showToast('Command submitted');
+       return data;
+     } catch (err) {
+       item.status = 'failed';
+       item.error = String(err.message || err);
+       renderQueue();
+       showToast('Submit failed');
+       throw err;
+     }
+   }
+
+   const randomCommands = [
+     'Run around and jump.',
+     'Wave to the camera.',
+     'Walk to the nearest door.',
+     'Crouch and stand three times.',
+     'Spin in a circle and stop.',
+     'Walk forward five steps and turn left.',
+     'Do a short dance.',
+     'Look around, then jump once.'
+   ];
+   function pickRandomCommand() {
+     return randomCommands[Math.floor(Math.random() * randomCommands.length)];
+   }
+   function sendRandom() {
+     const cmd = pickRandomCommand();
+     return sendPrompt(cmd, 'random');
+   }
+
+   // Wire up UI
+   if (promptSendBtn && promptInput) {
+     promptSendBtn.addEventListener('click', () => {
+       const text = (promptInput.value || '').trim();
+       if (!text) return;
+       sendPrompt(text).catch(() => {});
+     });
+     promptInput.addEventListener('keydown', (ev) => {
+       if (ev.key === 'Enter') {
+         const text = (promptInput.value || '').trim();
+         if (!text) return;
+         sendPrompt(text).catch(() => {});
+       }
+     });
+   }
+   if (randomBtn) {
+     randomBtn.addEventListener('click', () => { sendRandom().catch(() => {}); });
+   }
+
+   // Auto random commands
+   let autoTimer = null;
+   function setAuto(on) {
+     if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+     if (on) {
+       let sec = parseInt((autoEverySecInput && autoEverySecInput.value) || '30', 10);
+       if (!Number.isFinite(sec) || sec < 5) sec = 30;
+       autoTimer = setInterval(() => { sendRandom().catch(() => {}); }, sec * 1000);
+     }
+   }
+   if (autoToggle) {
+     autoToggle.addEventListener('change', () => setAuto(autoToggle.checked));
+   }
+   if (autoEverySecInput) {
+     autoEverySecInput.addEventListener('change', () => { if (autoToggle && autoToggle.checked) setAuto(true); });
+   }
+
+   // On load: inject a few random commands so the queue is not empty
+   setTimeout(() => { sendRandom().catch(() => {}); }, 1500);
+   setTimeout(() => { sendRandom().catch(() => {}); }, 6000);
+
+   // Enable auto via query param ?auto=1
+   const autoParam = urlParams.get('auto');
+   if (autoParam === '1' || autoParam === 'true') {
+     if (autoToggle) autoToggle.checked = true;
+     setAuto(true);
+   }
+
+   // Initial characters fetch in case SSE connection is delayed
+   fetchCharacters();
+ })();
+ </script>
+</body>
+</html>
