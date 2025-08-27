@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TheDimesSquare.com - AI Agent Experience</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #667eea;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 60px 0 40px;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero p {
+            font-size: 20px;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .agent-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin: 0 20px 40px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .agent-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .agent-header h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .agent-header p {
+            font-size: 16px;
+            opacity: 0.9;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .agent-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .expand-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .expand-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .agent-embed {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border: none;
+            display: block;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #667eea;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 60px 0;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-10px);
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .feature h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .feature p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-content {
+            position: relative;
+            width: 95%;
+            height: 95%;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 1001;
+            transition: background 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .fullscreen-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 36px;
+            }
+            
+            .agent-controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .agent-embed {
+                height: 400px;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">TheDimesSquare</div>
+                <nav>
+                    <ul class="nav-links">
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#agent">AI Agent</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#about">About</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Welcome to Dimes Square</h1>
+            <p>Experience the future of AI-powered urban exploration with our intelligent agent navigating a living digital cityscape</p>
+        </div>
+    </section>
+
+    <!-- AI Agent Section -->
+    <section id="agent" class="agent-section">
+        <div class="agent-header">
+            <h2>🤖 Live AI Agent Simulation</h2>
+            <p>Watch as our AI agent explores and interacts with a dynamic urban environment in real-time. Submit commands and see them executed instantly!</p>
+        </div>
+        
+        <div class="agent-controls">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Agent Online</span>
+            </div>
+            <button class="expand-btn" onclick="expandAgent()">
+                🚀 Launch Full Experience
+            </button>
+        </div>
+
+        <div style="position: relative;">
+            <iframe 
+                id="agentEmbed"
+                class="agent-embed" 
+                src="https://d1u690gz6k82jo.cloudfront.net/?v=20250827-1835"
+                frameborder="0"
+                allowfullscreen>
+            </iframe>
+            <div id="loadingOverlay" class="loading-overlay">
+                <div>🔄 Loading AI Agent Experience...</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <div class="feature">
+                <div class="feature-icon">🌆</div>
+                <h3>Urban Exploration</h3>
+                <p>Navigate through a detailed 3D cityscape with realistic physics and environmental interactions</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🧠</div>
+                <h3>AI-Powered Intelligence</h3>
+                <p>Advanced AI agent that understands context, learns from interactions, and makes intelligent decisions</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Real-Time Interaction</h3>
+                <p>Submit commands and watch them execute immediately in the shared virtual environment</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">👥</div>
+                <h3>Shared Experience</h3>
+                <p>Multiple users can interact with the same agent simultaneously, creating a collaborative exploration</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">📸</div>
+                <h3>Visual Documentation</h3>
+                <p>Every interaction is captured with screenshots and stored for later review and analysis</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🔄</div>
+                <h3>Continuous Learning</h3>
+                <p>The agent evolves and improves its responses based on user interactions and environmental feedback</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fullscreen Overlay -->
+    <div id="fullscreenOverlay" class="fullscreen-overlay">
+        <div class="fullscreen-content">
+            <button class="close-btn" onclick="closeFullscreen()">×</button>
+            <iframe id="fullscreenIframe" class="fullscreen-iframe" src=""></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Hide loading overlay when iframe loads
+        document.getElementById('agentEmbed').onload = function() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        };
+
+        // Expand to fullscreen
+        function expandAgent() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            const iframe = document.getElementById('fullscreenIframe');
+            
+            iframe.src = 'https://d1u690gz6k82jo.cloudfront.net/?v=20250827-1835';
+            overlay.style.display = 'flex';
+            
+            // Animate in
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.transition = 'opacity 0.3s ease';
+                overlay.style.opacity = '1';
+            }, 10);
+        }
+
+        // Close fullscreen
+        function closeFullscreen() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            overlay.style.opacity = '0';
+            
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                document.getElementById('fullscreenIframe').src = '';
+            }, 300);
+        }
+
+        // Close on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeFullscreen();
+            }
+        });
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Update status indicator based on iframe health
+        setInterval(function() {
+            // This could ping the API to check actual status
+            // For now, we'll assume it's always online
+        }, 30000);
+    </script>
+</body>
+</html>

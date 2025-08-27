@@ -59,8 +59,11 @@ class WebSocketCallbackHandler:
             complete = kwargs.get("complete", False)
             current_tool_use = kwargs.get("current_tool_use", {})
             
+            print(f"WebSocketCallbackHandler called with: reasoningText={bool(reasoningText)}, data='{data[:50]}...', complete={complete}, tool_use={current_tool_use.get('name', 'None')}")
+            
             # Broadcast reasoning text (agent's thoughts)
             if reasoningText:
+                print(f"Broadcasting agent thought: {reasoningText[:100]}...")
                 asyncio.create_task(self.agent_manager.broadcast_update({
                     "type": "agent_thought",
                     "content": reasoningText,
@@ -69,6 +72,7 @@ class WebSocketCallbackHandler:
             
             # Broadcast response data
             if data:
+                print(f"Broadcasting agent response: {data[:100]}...")
                 asyncio.create_task(self.agent_manager.broadcast_update({
                     "type": "agent_response",
                     "content": data,
@@ -82,6 +86,7 @@ class WebSocketCallbackHandler:
                 if self.previous_tool_use != current_tool_use:
                     self.previous_tool_use = current_tool_use
                     self.tool_count += 1
+                    print(f"Broadcasting tool use: {tool_name}")
                     asyncio.create_task(self.agent_manager.broadcast_update({
                         "type": "tool_use",
                         "tool_name": tool_name,
@@ -91,6 +96,8 @@ class WebSocketCallbackHandler:
                     
         except Exception as e:
             print(f"Error in WebSocketCallbackHandler: {e}")
+            import traceback
+            traceback.print_exc()
 
 # Pydantic models
 class CommandRequest(BaseModel):

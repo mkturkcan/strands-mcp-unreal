@@ -1,0 +1,565 @@
+<!-- Direct API Integration for TheDimesSquare.com -->
+<!-- This version connects directly to the Strands API without embedding -->
+
+<section id="strands-agent" class="strands-section">
+    <div class="strands-container">
+        <h2 class="strands-title glitch" data-text="NEURAL AGENT">NEURAL AGENT</h2>
+        <p class="strands-subtitle">DIRECT API // UNFILTERED ACCESS</p>
+        
+        <div class="command-interface">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="commandInput" 
+                    placeholder="ENTER COMMAND..." 
+                    class="command-input"
+                    onkeypress="handleEnterKey(event)"
+                />
+                <button onclick="sendCommand()" class="send-btn">
+                    <span>EXECUTE</span>
+                </button>
+            </div>
+            
+            <div class="persona-selector">
+                <select id="personaSelect" class="persona-select">
+                    <option value="explorer">EXPLORER</option>
+                    <option value="guardian">GUARDIAN</option>
+                    <option value="wanderer">WANDERER</option>
+                    <option value="observer">OBSERVER</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="agent-display">
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">STATUS:</span>
+                    <span id="agentStatus" class="status-value">IDLE</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">QUEUE:</span>
+                    <span id="queueLength" class="status-value">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">COMMANDS:</span>
+                    <span id="totalCommands" class="status-value">0</span>
+                </div>
+            </div>
+            
+            <div class="output-container">
+                <div class="output-tabs">
+                    <button class="tab-btn active" onclick="switchTab('stream')">STREAM</button>
+                    <button class="tab-btn" onclick="switchTab('response')">RESPONSE</button>
+                    <button class="tab-btn" onclick="switchTab('history')">HISTORY</button>
+                </div>
+                
+                <div class="output-content">
+                    <div id="streamOutput" class="output-panel active">
+                        <div class="stream-line">SYSTEM INITIALIZED</div>
+                        <div class="stream-line">AWAITING COMMANDS...</div>
+                    </div>
+                    
+                    <div id="responseOutput" class="output-panel">
+                        <div class="response-placeholder">No active command</div>
+                    </div>
+                    
+                    <div id="historyOutput" class="output-panel">
+                        <div class="history-placeholder">Command history will appear here</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="screenshot-container" id="screenshotContainer">
+                <div class="screenshot-placeholder">
+                    <div class="placeholder-icon">📷</div>
+                    <div class="placeholder-text">VISUAL FEED</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.strands-section {
+    background: #0a0a0a;
+    color: #f0f0f0;
+    padding: 4rem 2rem;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+}
+
+.strands-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.strands-title {
+    font-size: clamp(2.5rem, 6vw, 6rem);
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #ff0000;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+}
+
+.strands-subtitle {
+    text-align: center;
+    color: #00ffff;
+    font-size: 1rem;
+    letter-spacing: 0.3em;
+    margin-bottom: 3rem;
+}
+
+.command-interface {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.input-group {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.command-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid #00ffff;
+    color: #f0f0f0;
+    padding: 1rem;
+    font-family: inherit;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.command-input:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.send-btn {
+    background: linear-gradient(135deg, #ff0000, #ff3333);
+    border: 1px solid #ff0000;
+    color: #fff;
+    padding: 1rem 2rem;
+    cursor: pointer;
+    font-family: inherit;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    transition: all 0.3s ease;
+}
+
+.send-btn:hover {
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+    transform: translateY(-2px);
+}
+
+.persona-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.persona-select {
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #f0f0f0;
+    padding: 0.5rem 1rem;
+    font-family: inherit;
+    text-transform: uppercase;
+}
+
+.agent-display {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    padding: 1rem;
+    font-size: 0.9rem;
+}
+
+.status-item {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.status-label {
+    color: #888;
+}
+
+.status-value {
+    color: #00ffff;
+    font-weight: bold;
+}
+
+.output-container {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.output-tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.9);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #888;
+    padding: 1rem;
+    cursor: pointer;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.tab-btn:hover:not(.active) {
+    color: #f0f0f0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.output-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.output-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1rem;
+    overflow-y: auto;
+    display: none;
+}
+
+.output-panel.active {
+    display: block;
+}
+
+.stream-line {
+    margin-bottom: 0.5rem;
+    color: #00ffff;
+    font-size: 0.9rem;
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.stream-line:nth-child(2n) {
+    color: #f0f0f0;
+}
+
+.response-placeholder,
+.history-placeholder {
+    color: #666;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.screenshot-container {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.screenshot-placeholder {
+    text-align: center;
+    color: #666;
+}
+
+.placeholder-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.screenshot-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .status-bar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .output-container {
+        height: 300px;
+    }
+}
+</style>
+
+<script>
+class StrandsDirectAPI {
+    constructor() {
+        this.apiUrl = 'https://api.thedimessquare.com';
+        this.fallbackUrl = 'http://127.0.0.1:8002'; // Local fallback
+        this.currentCommandId = null;
+        this.pollingInterval = null;
+        
+        this.initializeConnection();
+        this.startStatusPolling();
+    }
+    
+    async initializeConnection() {
+        try {
+            // Try main API first
+            await this.testConnection(this.apiUrl);
+            this.addToStream('CONNECTION ESTABLISHED: ' + this.apiUrl);
+        } catch (error) {
+            this.addToStream('PRIMARY CONNECTION FAILED, TRYING FALLBACK...');
+            try {
+                await this.testConnection(this.fallbackUrl);
+                this.apiUrl = this.fallbackUrl;
+                this.addToStream('FALLBACK CONNECTION ESTABLISHED: ' + this.apiUrl);
+            } catch (fallbackError) {
+                this.addToStream('ERROR: ALL CONNECTIONS FAILED');
+                this.updateStatus('OFFLINE');
+            }
+        }
+    }
+    
+    async testConnection(url) {
+        const response = await fetch(`${url}/`, {
+            method: 'GET',
+            timeout: 5000
+        });
+        if (!response.ok) throw new Error('Connection test failed');
+        return response.json();
+    }
+    
+    async sendCommand(prompt, persona = 'explorer') {
+        try {
+            this.addToStream(`SENDING COMMAND: ${prompt}`);
+            this.updateStatus('PROCESSING');
+            
+            const response = await fetch(`${this.apiUrl}/api/add_command`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    persona_traits: this.getPersonaTraits(persona),
+                    submitted_by: 'thedimessquare_direct'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const result = await response.json();
+            this.currentCommandId = result.command_id;
+            
+            this.addToStream(`COMMAND QUEUED: ${result.command_id}`);
+            this.addToStream(`QUEUE POSITION: ${result.queue_position}`);
+            
+            // Start polling for this command
+            this.pollCommandStatus();
+            
+            return result;
+            
+        } catch (error) {
+            this.addToStream(`ERROR: ${error.message}`);
+            this.updateStatus('ERROR');
+            throw error;
+        }
+    }
+    
+    getPersonaTraits(persona) {
+        const personas = {
+            explorer: {
+                archetype: "explorer",
+                base_emotion: "excited",
+                personality: "Adventurous spirit who loves discovering new places",
+                goals: ["explore", "discover", "climb"]
+            },
+            guardian: {
+                archetype: "guardian",
+                base_emotion: "protective",
+                personality: "Vigilant protector of the urban environment",
+                goals: ["protect", "patrol", "observe"]
+            },
+            wanderer: {
+                archetype: "wanderer",
+                base_emotion: "curious",
+                personality: "Contemplative soul exploring existence",
+                goals: ["wander", "reflect", "discover"]
+            },
+            observer: {
+                archetype: "observer",
+                base_emotion: "analytical",
+                personality: "Keen observer of environmental details",
+                goals: ["observe", "analyze", "document"]
+            }
+        };
+        return personas[persona] || personas.explorer;
+    }
+    
+    async pollCommandStatus() {
+        if (!this.currentCommandId) return;
+        
+        try {
+            const response = await fetch(`${this.apiUrl}/api/turn_status/${this.currentCommandId}`);
+            if (response.ok) {
+                const status = await response.json();
+                this.handleCommandUpdate(status);
+                
+                if (status.status === 'completed' || status.status === 'failed') {
+                    this.currentCommandId = null;
+                } else {
+                    setTimeout(() => this.pollCommandStatus(), 2000);
+                }
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }
+    
+    handleCommandUpdate(data) {
+        if (data.status) {
+            this.updateStatus(data.status.toUpperCase());
+        }
+        
+        if (data.agent_response) {
+            document.getElementById('responseOutput').innerHTML = 
+                `<div class="response-text">${data.agent_response}</div>`;
+        }
+        
+        if (data.screenshot_url) {
+            this.updateScreenshot(data.screenshot_url);
+        }
+        
+        this.addToStream(`STATUS: ${data.status} | ${data.prompt}`);
+    }
+    
+    updateScreenshot(url) {
+        const container = document.getElementById('screenshotContainer');
+        container.innerHTML = `<img src="${url}" class="screenshot-image" alt="Agent Screenshot">`;
+    }
+    
+    async startStatusPolling() {
+        const updateStatus = async () => {
+            try {
+                const response = await fetch(`${this.apiUrl}/api/status`);
+                if (response.ok) {
+                    const status = await response.json();
+                    document.getElementById('queueLength').textContent = status.queue_length;
+                    document.getElementById('totalCommands').textContent = status.total_commands_processed;
+                    
+                    if (status.current_command) {
+                        this.addToStream(`ACTIVE: ${status.current_command.prompt}`);
+                    }
+                }
+            } catch (error) {
+                // Silent fail for status polling
+            }
+        };
+        
+        // Poll every 10 seconds
+        setInterval(updateStatus, 10000);
+        updateStatus(); // Initial call
+    }
+    
+    addToStream(text) {
+        const streamOutput = document.getElementById('streamOutput');
+        const line = document.createElement('div');
+        line.className = 'stream-line';
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+        streamOutput.appendChild(line);
+        streamOutput.scrollTop = streamOutput.scrollHeight;
+        
+        // Keep only last 50 lines
+        while (streamOutput.children.length > 50) {
+            streamOutput.removeChild(streamOutput.firstChild);
+        }
+    }
+    
+    updateStatus(status) {
+        document.getElementById('agentStatus').textContent = status;
+        
+        const statusEl = document.getElementById('agentStatus');
+        statusEl.className = 'status-value';
+        
+        if (status === 'PROCESSING') {
+            statusEl.style.color = '#ffff00';
+        } else if (status === 'ERROR' || status === 'OFFLINE') {
+            statusEl.style.color = '#ff0000';
+        } else {
+            statusEl.style.color = '#00ffff';
+        }
+    }
+}
+
+// Initialize API
+let strandsAPI;
+document.addEventListener('DOMContentLoaded', function() {
+    strandsAPI = new StrandsDirectAPI();
+});
+
+// UI Functions
+function sendCommand() {
+    const input = document.getElementById('commandInput');
+    const persona = document.getElementById('personaSelect').value;
+    const prompt = input.value.trim();
+    
+    if (!prompt) return;
+    
+    strandsAPI.sendCommand(prompt, persona);
+    input.value = '';
+}
+
+function handleEnterKey(event) {
+    if (event.key === 'Enter') {
+        sendCommand();
+    }
+}
+
+function switchTab(tabName) {
+    // Remove active class from all tabs and panels
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.output-panel').forEach(panel => panel.classList.remove('active'));
+    
+    // Add active class to selected tab and panel
+    event.target.classList.add('active');
+    document.getElementById(tabName + 'Output').classList.add('active');
+}
+</script>
