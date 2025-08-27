@@ -164,6 +164,9 @@
     .stream-status { font-size: 11px; color: #ef4444; font-weight: 600; }
     .stream-content { flex: 1; padding: 12px; overflow-y: auto; max-height: 50vh; background: rgba(5,5,5,0.8); border-radius: 6px; margin: 8px; }
     .stream-line { font-size: 13px; color: var(--text); line-height: 1.5; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; margin-bottom: 8px; }
+    .stream-thought { color: #a855f7; font-style: italic; }
+    .stream-response { color: #36d38c; font-weight: 500; }
+    .stream-tool { color: #f59e0b; }
     .cursor { display: inline-block; width: 2px; height: 1em; background: var(--accent); animation: blink 1s infinite; margin-left: 2px; }
     @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
 
@@ -292,13 +295,14 @@
   // Strands Agent Integration
   class StrandsAgentClient {
     constructor() {
-      // Use your API server URL here - modify this to point to your deployed API
-      this.apiUrl = 'http://localhost:8001'; // Change to your API server URL
+      // Use proper domain with ALB load balancing
+      this.apiUrl = 'https://api.thedimessquare.com';
       this.websocket = null;
       this.sessionId = this.generateSessionId();
       this.currentTurn = null;
       this.turnHistory = [];
       this.isConnected = false;
+      this.lastDisplayedResponse = null;
     }
 
     generateSessionId() {
@@ -346,13 +350,13 @@
       };
 
       try {
-        const response = await fetch(`${this.apiUrl}/api/start_turn`, {
+        const response = await fetch(`${this.apiUrl}/api/add_command`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: prompt,
-            session_id: this.sessionId,
-            persona_traits: personas[persona] || personas.explorer
+            persona_traits: personas[persona] || personas.explorer,
+            submitted_by: 'frontend'
           })
         });
 
@@ -383,13 +387,22 @@
     }
 
     connectWebSocket() {
+      if (!this.apiUrl) {
+        console.log('API URL not configured, skipping WebSocket');
+        this.updateStreamStatus('API not configured');
+        return;
+      }
+
+      // Close existing WebSocket if any
       if (this.websocket) {
         this.websocket.close();
       }
 
+      // Enable WebSocket for HTTPS to WSS connections  
       try {
-        const wsUrl = this.apiUrl.replace('http://', 'ws://').replace('https://', 'wss://');
-        this.websocket = new WebSocket(`${wsUrl}/ws/${this.sessionId}`);
+        const wsUrl = this.apiUrl.replace('https://', 'wss://');
+        console.log('Connecting to WebSocket:', `${wsUrl}/ws`);
+        this.websocket = new WebSocket(`${wsUrl}/ws`);  // Global WebSocket for shared agent
         
         this.websocket.onopen = () => {
           console.log('WebSocket connected to Strands API');
@@ -430,6 +443,39 @@
         case 'status_update':
           this.updateTurnDisplay(data.data);
           break;
+        case 'initial_status':
+          this.addToStream(`🟢 Connected to shared agent (${data.connected_clients} clients)`);
+          break;
+        case 'command_queued':
+          this.addToStream(`📝 Command queued: ${data.command.prompt}`);
+          this.updateTurnDisplay({status: 'pending', turn_id: data.command.command_id});
+          break;
+        case 'command_started':
+          this.addToStream(`🚀 Processing command: ${data.command.prompt}`);
+          this.updateTurnDisplay({status: 'processing', turn_id: data.command.command_id});
+          break;
+        case 'command_progress':
+          if (data.message) {
+            this.addToStream(`⚡ ${data.message}`);
+          }
+          break;
+        case 'command_completed':
+          this.addToStream(`✅ Command completed!`);
+          this.updateTurnDisplay(data.result);
+          break;
+        case 'command_error':
+          this.addToStream(`❌ Command failed: ${data.error}`);
+          this.updateTurnDisplay({status: 'error', error_message: data.error});
+          break;
+        case 'agent_thought':
+          this.addToStream(`💭 ${data.content}`, 'thought');
+          break;
+        case 'agent_response':
+          this.addToStream(`🤖 ${data.content}`, 'response');
+          break;
+        case 'tool_use':
+          this.addToStream(`🔧 Tool #${data.tool_number}: ${data.tool_name}`, 'tool');
+          break;
         case 'pong':
           // Keep-alive response
           break;
@@ -439,6 +485,8 @@
     }
 
     updateTurnDisplay(turnData) {
+      if (!turnData) return;
+      
       const statusEl = document.getElementById('turnStatus');
       const resultEl = document.getElementById('turnResult');
       const resultText = document.getElementById('resultText');
@@ -447,6 +495,20 @@
       if (turnData.status) {
         statusEl.textContent = turnData.status.charAt(0).toUpperCase() + turnData.status.slice(1);
         statusEl.className = `turn-status status-${turnData.status}`;
+      }
+
+      // Stream agent response in chunks for better UX
+      if (turnData.agent_response && turnData.agent_response !== this.lastDisplayedResponse) {
+        this.lastDisplayedResponse = turnData.agent_response;
+        
+        // Add full response to stream
+        this.addToStream(`Agent: ${turnData.agent_response.substring(0, 200)}${turnData.agent_response.length > 200 ? '...' : ''}`);
+        
+        // Show position updates
+        if (turnData.env_state && turnData.env_state.pos) {
+          const pos = turnData.env_state.pos;
+          this.addToStream(`Position: (${pos[0].toFixed(1)}, ${pos[1].toFixed(1)}, ${pos[2].toFixed(1)})`);
+        }
       }
 
       if (turnData.status === 'completed' && turnData.agent_response) {
@@ -477,15 +539,17 @@
         });
         this.updateHistoryDisplay();
 
-        // Update stream
-        this.addToStream(`Turn completed: ${turnData.agent_response}`);
+        // Update stream with completion
+        this.addToStream(`✅ Turn completed successfully!`);
       } else if (turnData.status === 'error') {
         resultText.textContent = `Error: ${turnData.error_message || 'Unknown error occurred'}`;
         resultMeta.textContent = `Turn: ${turnData.turn_id} • Failed`;
         resultEl.style.display = 'block';
-        this.addToStream(`Turn failed: ${turnData.error_message}`);
+        this.addToStream(`❌ Turn failed: ${turnData.error_message}`);
       } else if (turnData.status === 'running') {
-        this.addToStream('Agent is processing turn...');
+        this.addToStream('🔄 Agent is thinking...');
+      } else if (turnData.status === 'pending') {
+        this.addToStream('⏳ Turn starting...');
       }
     }
 
@@ -497,10 +561,13 @@
       }
     }
 
-    addToStream(message) {
+    addToStream(message, type = null) {
       const streamContent = document.getElementById('streamContent');
       const streamLine = document.createElement('div');
       streamLine.className = 'stream-line';
+      if (type) {
+        streamLine.className += ` stream-${type}`;
+      }
       streamLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
       streamContent.appendChild(streamLine);
       streamContent.scrollTop = streamContent.scrollHeight;
@@ -586,31 +653,37 @@
       try {
         strandsClient.addToStream(`Starting turn: ${prompt}`);
         const result = await strandsClient.startTurn(prompt, persona);
-        showToast(`Turn started: ${result.turn_id}`);
+        showToast(`Command queued: ${result.command_id}`);
         
         // Update persona display
         updatePersonaDisplay(persona);
         
-        // Poll for status updates
+        // Poll for status updates with faster initial polling
+        let pollCount = 0;
         const pollStatus = async () => {
           try {
-            const status = await strandsClient.getTurnStatus(result.turn_id);
+            const status = await strandsClient.getTurnStatus(result.command_id);
             strandsClient.updateTurnDisplay(status);
             
             if (status.status === 'running' || status.status === 'pending') {
-              setTimeout(pollStatus, 2000); // Poll every 2 seconds
+              pollCount++;
+              // More frequent polling initially, then slower
+              const interval = pollCount < 10 ? 1000 : pollCount < 20 ? 2000 : 3000;
+              setTimeout(pollStatus, interval);
             } else {
               runTurnBtn.disabled = false;
               runTurnBtn.textContent = '🎮 Run Turn';
+              strandsClient.addToStream(`🏁 Polling completed after ${pollCount} checks`);
             }
           } catch (error) {
             console.error('Failed to poll status:', error);
+            strandsClient.addToStream(`❌ Polling error: ${error.message}`);
             runTurnBtn.disabled = false;
             runTurnBtn.textContent = '🎮 Run Turn';
           }
         };
         
-        setTimeout(pollStatus, 1000);
+        setTimeout(pollStatus, 500); // Start polling quickly
         
       } catch (error) {
         console.error('Turn failed:', error);

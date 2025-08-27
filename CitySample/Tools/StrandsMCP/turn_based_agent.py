@@ -139,12 +139,14 @@ class TurnBasedAgent:
                  mcp_url: str = "http://localhost:8000/mcp",
                  s3_bucket: Optional[str] = None,
                  unreal_host: str = "127.0.0.1",
-                 unreal_port: int = 17777):
+                 unreal_port: int = 17777,
+                 callback_handler: Optional[Any] = None):
         self.session_id = session_id or f"session-{int(time.time())}"
         self.mcp_url = mcp_url
         self.unreal_host = unreal_host
         self.unreal_port = unreal_port
         self.current_turn: Optional[TurnState] = None
+        self.callback_handler = callback_handler
         
         # S3 integration
         self.s3_manager = S3Manager(s3_bucket) if s3_bucket else None
@@ -245,11 +247,17 @@ class TurnBasedAgent:
             )
             
             # Create agent
-            self.agent_instance = Agent(
-                tools=filtered_tools,
-                session_manager=self.session_manager,
-                system_prompt=system_prompt
-            )
+            agent_kwargs = {
+                "tools": filtered_tools,
+                "session_manager": self.session_manager,
+                "system_prompt": system_prompt
+            }
+            
+            # Add callback handler if provided
+            if self.callback_handler:
+                agent_kwargs["callback_handler"] = self.callback_handler
+            
+            self.agent_instance = Agent(**agent_kwargs)
             
             return True
             
