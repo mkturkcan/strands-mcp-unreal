@@ -17,20 +17,59 @@ This repository contains multiple Unreal Engine 5.6 projects with integrated Str
 
 ### Strands MCP System
 The core AI agent system consists of:
-- **persona_agent.py** - Main persona-based agent with consciousness simulation and OBS streaming
-- **agent_test.py** - Basic agent testing framework
+
+**Turn-Based System (NEW - Production Ready):**
+- **turn_based_agent.py** - Main turn-based agent system with S3 integration
+- **api_server.py** - REST API and WebSocket server for CloudFront integration
+- **run_turn_based_system.ps1** - Complete system launcher
+- **frontend_integration.md** - Integration guide for CloudFront frontend
+
+**Legacy Components:**
+- **persona_agent.py** - Continuous persona-based agent with consciousness simulation
+- **agent_test.py** - Single-turn agent testing framework
 - **server.py** - MCP server for handling Unreal Engine communication
-- **orchestrator.py** - Agent orchestration and management
+
+### Turn-Based System Architecture
+```
+CloudFront Frontend (https://d1u690gz6k82jo.cloudfront.net/)
+         ↓
+    API Server (port 8001)
+         ↓
+  Turn-Based Agent
+         ↓
+    MCP Client → MCP Server (port 8000) → Unreal Engine StrandsInputServer
+         ↓
+   S3 Storage (Screenshots, States, Logs)
+```
 
 ### Unreal Engine Integration
 Both projects use the **StrandsInputServer** plugin which enables:
 - Real-time communication between Python agents and UE characters
 - Remote control of character movement, actions, and behaviors
 - State persistence and session management
+- Turn-based gameplay with screenshot and state capture
 
 ## Common Development Commands
 
-### Running Persona Agents
+### Turn-Based Agent System (NEW - CloudFront Integration)
+```powershell
+# Start complete turn-based system with S3 integration
+.\CitySample\Tools\StrandsMCP\run_turn_based_system.ps1 -S3Bucket "your-strands-bucket"
+
+# Basic turn-based system (no S3)
+.\CitySample\Tools\StrandsMCP\run_turn_based_system.ps1
+
+# Custom ports for development
+.\CitySample\Tools\StrandsMCP\run_turn_based_system.ps1 -ApiPort 8002 -McpPort 8001
+```
+
+**API Endpoints for CloudFront Frontend:**
+- `POST /api/start_turn` - Start a new agent turn
+- `GET /api/turn_status/{turn_id}` - Get turn status
+- `POST /api/interact` - Compatibility with existing frontend
+- `WebSocket /ws/{session_id}` - Real-time streaming
+
+### Running Persona Agents (Legacy)
 ```powershell
 # Basic usage - run Explorer persona for 60 seconds
 .\run_persona.ps1
@@ -44,13 +83,16 @@ Both projects use the **StrandsInputServer** plugin which enables:
 
 ### Direct Python Agent Commands
 ```bash
-# Run basic agent test
+# NEW: Run turn-based agent
+"MyProject\Intermediate\PipInstall\Scripts\python.exe" "CitySample\Tools\StrandsMCP\turn_based_agent.py" --prompt "Look around" --s3-bucket "bucket-name"
+
+# Run single-turn agent test
 "MyProject\Intermediate\PipInstall\Scripts\python.exe" "CitySample\Tools\StrandsMCP\agent_test.py" --prompt "Run around."
 
 # Start MCP server
 "MyProject\Intermediate\PipInstall\Scripts\python.exe" "CitySample\Tools\StrandsMCP\server.py"
 
-# Run persona agent directly
+# Run persona agent directly (continuous)
 "MyProject\Intermediate\PipInstall\Scripts\python.exe" "CitySample\Tools\StrandsMCP\persona_agent.py" --persona "Explorer" --duration 60
 ```
 

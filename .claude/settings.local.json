@@ -12,7 +12,9 @@
       "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\persona_agent.py\" --persona \"Guardian\" --duration 45)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "WebFetch(domain:d1u690gz6k82jo.cloudfront.net)",
+      "Bash(\"MyProject\\Intermediate\\PipInstall\\Scripts\\python.exe\" \"CitySample\\Tools\\StrandsMCP\\turn_based_agent.py\" --help)"
     ],
     "deny": []
   }
