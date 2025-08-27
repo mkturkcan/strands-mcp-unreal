@@ -59,7 +59,9 @@ class WebSocketCallbackHandler:
             complete = kwargs.get("complete", False)
             current_tool_use = kwargs.get("current_tool_use", {})
             
-            print(f"WebSocketCallbackHandler called with: reasoningText={bool(reasoningText)}, data='{data[:50]}...', complete={complete}, tool_use={current_tool_use.get('name', 'None')}")
+            print(f"WebSocketCallbackHandler called with kwargs: {list(kwargs.keys())}")
+            if len(str(kwargs)) < 200:
+                print(f"Full kwargs: {kwargs}")
             
             # Broadcast reasoning text (agent's thoughts)
             if reasoningText:
