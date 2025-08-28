@@ -89,21 +89,23 @@
     .status-error { background: rgba(220,53,69,0.2); color: #dc3545; }
 
     .prompt-input {
-      width: 100%;
+      width: 85%;
       background: #0b1b26;
       border: 1px solid rgba(255,255,255,0.12);
       color: var(--text);
       border-radius: 6px;
       padding: 8px 10px;
       font-size: 13px;
-      margin-bottom: 8px;
+      margin: 0 auto 8px auto;
+      display: block;
       resize: vertical;
-      min-height: 60px;
+      min-height: 40px;
     }
     .turn-actions {
       display: flex;
       gap: 8px;
       margin-bottom: 8px;
+      justify-content: center;
     }
     .run-turn-btn {
       background: var(--accent);
@@ -162,11 +164,24 @@
     .stream-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
     .stream-title { font-size: 13px; font-weight: 600; color: var(--text); }
     .stream-status { font-size: 11px; color: #ef4444; font-weight: 600; }
+    
+    /* Queue Status styles */
+    .queue-status { border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(5,5,5,0.4); }
+    .queue-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; cursor: pointer; }
+    .queue-title { font-size: 12px; font-weight: 600; color: #f59e0b; }
+    .toggle-queue { background: none; border: none; color: var(--text); font-size: 12px; cursor: pointer; }
+    .currently-processing { padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); background: rgba(255,193,7,0.1); }
+    .processing-label { font-size: 11px; color: #ffc107; font-weight: 600; margin-bottom: 4px; }
+    .processing-message { font-size: 12px; color: var(--text); font-style: italic; }
+    .queue-list { max-height: 120px; overflow-y: auto; }
+    .queue-item { padding: 4px 12px; font-size: 11px; color: #9fb0c0; border-bottom: 1px solid rgba(255,255,255,0.02); }
+    .queue-empty { padding: 6px 12px; font-size: 11px; color: #666; font-style: italic; }
     .stream-content { flex: 1; padding: 12px; overflow-y: auto; max-height: 50vh; background: rgba(5,5,5,0.8); border-radius: 6px; margin: 8px; }
     .stream-line { font-size: 13px; color: var(--text); line-height: 1.5; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; margin-bottom: 8px; }
     .stream-thought { color: #a855f7; font-style: italic; }
     .stream-response { color: #36d38c; font-weight: 500; }
     .stream-tool { color: #f59e0b; }
+    .stream-historical { opacity: 0.7; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 8px; margin-left: 4px; }
     .cursor { display: inline-block; width: 2px; height: 1em; background: var(--accent); animation: blink 1s infinite; margin-left: 2px; }
     @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
 
@@ -205,7 +220,6 @@
        <button class="tab-btn active" data-tab="t-control">Agent Control</button>
        <button class="tab-btn" data-tab="t-persona">Persona</button>
        <button class="tab-btn" data-tab="t-stream">Stream</button>
-       <button class="tab-btn" data-tab="t-history">History</button>
      </div>
 
      <!-- Agent Control Tab -->
@@ -216,17 +230,10 @@
            <div id="turnStatus" class="turn-status status-ready">Ready</div>
          </div>
          
-         <textarea id="promptInput" class="prompt-input" placeholder="Enter command for your Strands agent...">Look around and describe what you see in detail.</textarea>
+         <textarea id="promptInput" class="prompt-input" placeholder="Send the agent a message"></textarea>
          
          <div class="turn-actions">
-           <button id="runTurnBtn" class="run-turn-btn">🎮 Run Turn</button>
-           <select id="personaSelect" class="persona-select">
-             <option value="explorer">Explorer</option>
-             <option value="cautious">Cautious</option>
-             <option value="social">Social</option>
-             <option value="wanderer">Wanderer</option>
-             <option value="guardian">Guardian</option>
-           </select>
+           <button id="runTurnBtn" class="run-turn-btn">▶️ Run Turn</button>
          </div>
 
          <div id="turnResult" class="turn-result" style="display: none;">
@@ -240,21 +247,25 @@
      <div id="t-persona" class="tab">
        <div class="persona-card">
          <div class="persona-summary" onclick="togglePersona()">
-           <div class="persona-name">STRANDS AGENT</div>
-           <div class="persona-tagline">AI-powered character in Unreal Engine ↕</div>
+           <div class="persona-name">ALEX - URBAN PHILOSOPHER</div>
+           <div class="persona-tagline">26-year-old NYC resident exploring with philosophical curiosity ↕</div>
          </div>
          <div id="persona-details" class="persona-details">
            <div class="persona-section">
-             <div class="section-title">Current Persona</div>
-             <div id="currentPersonaText" class="section-text">Explorer - Adventurous spirit who loves discovering new places</div>
+             <div class="section-title">Character Profile</div>
+             <div id="currentPersonaText" class="section-text">Alex - 26-year-old NYC philosopher who sees deeper meaning in everyday experiences</div>
            </div>
            <div class="persona-section">
-             <div class="section-title">Capabilities</div>
-             <div class="section-text">Movement, interaction, screenshot analysis, environment awareness, goal-oriented behavior</div>
+             <div class="section-title">Background</div>
+             <div class="section-text">Philosophy degree graduate living in New York City. Currently outside exploring the urban landscape with curiosity and wonder.</div>
            </div>
            <div class="persona-section">
-             <div class="section-title">Integration</div>
-             <div class="section-text">Real-time streaming • S3 storage • Turn-based gameplay • Session persistence</div>
+             <div class="section-title">Personality Traits</div>
+             <div class="section-text">Frequently philosophizes about life, human nature, and meaning of everyday experiences. Sees deeper connections in mundane things. References philosophical concepts in conversation.</div>
+           </div>
+           <div class="persona-section">
+             <div class="section-title">System Integration</div>
+             <div class="section-text">Real-time character embodiment • Unreal Engine movement • Environmental awareness • Philosophical commentary</div>
            </div>
          </div>
        </div>
@@ -267,18 +278,28 @@
            <div class="stream-title">Agent Thoughts</div>
            <div id="streamStatus" class="stream-status">● Waiting</div>
          </div>
+         
+         <!-- Queue Status -->
+         <div id="queueStatus" class="queue-status" style="display: none;">
+           <div class="queue-header">
+             <span class="queue-title">Processing Queue</span>
+             <button id="toggleQueue" class="toggle-queue">▼</button>
+           </div>
+           <div id="currentlyProcessing" class="currently-processing" style="display: none;">
+             <div class="processing-label">🔄 Currently Processing:</div>
+             <div id="processingMessage" class="processing-message"></div>
+           </div>
+           <div id="queueList" class="queue-list">
+             <div class="queue-empty">No messages in queue</div>
+           </div>
+         </div>
+         
          <div class="stream-content" id="streamContent">
            <div class="stream-line">Strands agent ready. Click "Run Turn" to begin...</div>
          </div>
        </div>
      </div>
 
-     <!-- History Tab -->
-     <div id="t-history" class="tab">
-       <div id="historyContent">
-         <div class="stream-line">Turn history will appear here...</div>
-       </div>
-     </div>
    </div>
  </div>
  
@@ -295,14 +316,26 @@
   // Strands Agent Integration
   class StrandsAgentClient {
     constructor() {
-      // Use proper domain with ALB load balancing
-      this.apiUrl = 'https://api.thedimessquare.com';
+      // Use local development server
+      this.apiUrl = 'http://localhost:8002';
       this.websocket = null;
       this.sessionId = this.generateSessionId();
       this.currentTurn = null;
       this.turnHistory = [];
       this.isConnected = false;
+      
+      // Streaming buffer for smooth display
+      this.streamBuffer = ''; 
+      this.currentStreamElement = null; 
+      this.streamStartTime = null;
       this.lastDisplayedResponse = null;
+      
+      // Queue management
+      this.queueData = {
+        currentlyProcessing: null,
+        queue: [],
+        isQueueExpanded: false
+      };
     }
 
     generateSessionId() {
@@ -315,37 +348,19 @@
       return v;
     }
 
-    async startTurn(prompt, persona = 'explorer') {
+    async startTurn(prompt, persona = 'urban_philosopher') {
       const personas = {
-        explorer: {
-          archetype: "explorer",
-          base_emotion: "excited", 
-          personality: "Adventurous spirit who loves discovering new places",
-          goals: ["explore", "climb", "discover secrets"]
+        urban_philosopher: {
+          persona: "You are Alex, a 26-year-old living in New York City. You're currently outside exploring the urban landscape. You have a philosophy degree and frequently philosophize about life, human nature, and the meaning of everyday experiences. You tend to see deeper connections in mundane things and often reference philosophical concepts in casual conversation. You move through the world with curiosity and wonder."
         },
-        cautious: {
-          archetype: "cautious",
-          base_emotion: "careful",
-          personality: "Thoughtful observer who moves deliberately",
-          goals: ["assess", "plan", "stay safe"]
+        street_artist: {
+          persona: "You are Sam, a 28-year-old street artist from Brooklyn. You're outside looking for inspiration and new spots for your art. You see the city as your canvas and are always observing colors, textures, and urban beauty that others might miss. You have strong opinions about creativity, authenticity, and how art can change communities. You speak with passion about your craft."
         },
-        social: {
-          archetype: "social", 
-          base_emotion: "friendly",
-          personality: "Outgoing character who seeks interaction",
-          goals: ["communicate", "help others", "build relationships"]
+        night_wanderer: {
+          persona: "You are River, a 24-year-old insomniac who finds peace in late-night city walks. You're outside during the quiet hours, observing how different the world feels after dark. You're introspective and melancholic, finding beauty in solitude and empty streets. You often think about what people's lives are like behind lit windows and wonder about the stories of strangers."
         },
-        wanderer: {
-          archetype: "wanderer",
-          base_emotion: "whimsical", 
-          personality: "A dreamy soul who sees magic in everything",
-          goals: ["find beauty", "contemplate existence", "follow curiosity"]
-        },
-        guardian: {
-          archetype: "guardian",
-          base_emotion: "protective",
-          personality: "Watchful protector focused on safety",
-          goals: ["protect", "guard", "maintain order"]
+        urban_explorer: {
+          persona: "You are Casey, a 30-year-old urban explorer and photographer. You're outside searching for abandoned places, rooftops, and hidden corners of the city that most people never see. You're fearless about climbing and exploring, driven by curiosity about forgotten spaces and untold stories. You document everything and love sharing discoveries with others."
         }
       };
 
@@ -355,7 +370,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: prompt,
-            persona_traits: personas[persona] || personas.explorer,
+            persona_traits: personas[persona] || personas.urban_philosopher,
             submitted_by: 'frontend'
           })
         });
@@ -398,9 +413,9 @@
         this.websocket.close();
       }
 
-      // Enable WebSocket for HTTPS to WSS connections  
+      // Enable WebSocket connections
       try {
-        const wsUrl = this.apiUrl.replace('https://', 'wss://');
+        const wsUrl = this.apiUrl.replace('https://', 'wss://').replace('http://', 'ws://');
         console.log('Connecting to WebSocket:', `${wsUrl}/ws`);
         this.websocket = new WebSocket(`${wsUrl}/ws`);  // Global WebSocket for shared agent
         
@@ -408,6 +423,9 @@
           console.log('WebSocket connected to Strands API');
           this.isConnected = true;
           this.updateStreamStatus('Connected');
+          
+          // Load recent agent thoughts on connect
+          this.loadRecentThoughts();
         };
 
         this.websocket.onmessage = (event) => {
@@ -448,10 +466,25 @@
           break;
         case 'command_queued':
           this.addToStream(`📝 Command queued: ${data.command.prompt}`);
+          this.queueData.queue.push({
+            id: data.command.command_id,
+            prompt: data.command.prompt,
+            timestamp: new Date().toLocaleTimeString()
+          });
+          this.updateQueueDisplay();
           this.updateTurnDisplay({status: 'pending', turn_id: data.command.command_id});
           break;
         case 'command_started':
+          this.finalizeStreaming(); // End any previous streaming
           this.addToStream(`🚀 Processing command: ${data.command.prompt}`);
+          // Move from queue to currently processing
+          this.queueData.currentlyProcessing = {
+            id: data.command.command_id,
+            prompt: data.command.prompt,
+            timestamp: new Date().toLocaleTimeString()
+          };
+          this.queueData.queue = this.queueData.queue.filter(q => q.id !== data.command.command_id);
+          this.updateQueueDisplay();
           this.updateTurnDisplay({status: 'processing', turn_id: data.command.command_id});
           break;
         case 'command_progress':
@@ -460,18 +493,26 @@
           }
           break;
         case 'command_completed':
+          this.finalizeStreaming(); // End any streaming before completion message
           this.addToStream(`✅ Command completed!`);
+          this.queueData.currentlyProcessing = null; // Clear currently processing
+          this.updateQueueDisplay();
           this.updateTurnDisplay(data.result);
           break;
         case 'command_error':
           this.addToStream(`❌ Command failed: ${data.error}`);
+          this.queueData.currentlyProcessing = null; // Clear currently processing on error
+          this.updateQueueDisplay();
           this.updateTurnDisplay({status: 'error', error_message: data.error});
           break;
         case 'agent_thought':
           this.addToStream(`💭 ${data.content}`, 'thought');
           break;
         case 'agent_response':
-          this.addToStream(`🤖 ${data.content}`, 'response');
+          this.handleStreamingResponse(data.content);
+          break;
+        case 'agent_response_complete':
+          this.finalizeStreaming();
           break;
         case 'tool_use':
           this.addToStream(`🔧 Tool #${data.tool_number}: ${data.tool_name}`, 'tool');
@@ -553,6 +594,34 @@
       }
     }
 
+    updateQueueDisplay() {
+      const queueStatus = document.getElementById('queueStatus');
+      const currentlyProcessing = document.getElementById('currentlyProcessing');
+      const processingMessage = document.getElementById('processingMessage');
+      const queueList = document.getElementById('queueList');
+      
+      // Show/hide queue status section
+      const hasActivity = this.queueData.currentlyProcessing || this.queueData.queue.length > 0;
+      queueStatus.style.display = hasActivity ? 'block' : 'none';
+      
+      // Update currently processing section
+      if (this.queueData.currentlyProcessing) {
+        currentlyProcessing.style.display = 'block';
+        processingMessage.textContent = `"${this.queueData.currentlyProcessing.prompt.substring(0, 60)}${this.queueData.currentlyProcessing.prompt.length > 60 ? '...' : ''}"`;
+      } else {
+        currentlyProcessing.style.display = 'none';
+      }
+      
+      // Update queue list
+      if (this.queueData.queue.length > 0) {
+        queueList.innerHTML = this.queueData.queue.map((item, index) => 
+          `<div class="queue-item">${index + 1}. "${item.prompt.substring(0, 50)}${item.prompt.length > 50 ? '...' : ''}" (${item.timestamp})</div>`
+        ).join('');
+      } else {
+        queueList.innerHTML = '<div class="queue-empty">No messages in queue</div>';
+      }
+    }
+
     updateStreamStatus(status) {
       const statusEl = document.getElementById('streamStatus');
       if (statusEl) {
@@ -570,11 +639,121 @@
       }
       streamLine.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
       streamContent.appendChild(streamLine);
-      streamContent.scrollTop = streamContent.scrollHeight;
 
       // Keep only last 50 messages
       while (streamContent.children.length > 50) {
         streamContent.removeChild(streamContent.firstChild);
+      }
+    }
+
+    handleStreamingResponse(content) {
+      const streamContent = document.getElementById('streamContent');
+      
+      // Clean the content
+      const cleanContent = content.trim();
+      if (!cleanContent) return;
+      
+      // If this is the start of a new response stream
+      if (!this.currentStreamElement) {
+        // Create new streaming element with timestamp
+        this.currentStreamElement = document.createElement('div');
+        this.currentStreamElement.className = 'stream-line stream-response';
+        this.streamStartTime = new Date().toLocaleTimeString();
+        this.currentStreamElement.textContent = `[${this.streamStartTime}] 🤖 `;
+        this.streamBuffer = '';
+        this.wordSet = new Set(); // Track words we've seen
+        streamContent.appendChild(this.currentStreamElement);
+      }
+      
+      // Word-by-word deduplication approach
+      const newWords = cleanContent.split(/(\s+|[^\w\s]+)/); // Split on whitespace and punctuation
+      let addedContent = '';
+      
+      for (const word of newWords) {
+        if (!word.trim()) {
+          // Always add whitespace/punctuation
+          addedContent += word;
+        } else {
+          // For actual words, check if we haven't seen this sequence recently
+          const wordKey = word.toLowerCase();
+          const recentBuffer = this.streamBuffer.slice(-100); // Last 100 chars
+          
+          // Only add if this word isn't duplicated at the end of recent buffer
+          if (!recentBuffer.toLowerCase().includes(wordKey + ' ' + wordKey) && 
+              !recentBuffer.toLowerCase().endsWith(wordKey)) {
+            addedContent += word;
+            this.wordSet.add(wordKey);
+          }
+        }
+      }
+      
+      // Only update if we have new content
+      if (addedContent.trim()) {
+        this.streamBuffer += addedContent;
+        
+        // Clean up obvious duplications in the final buffer
+        this.streamBuffer = this.streamBuffer.replace(/(\b\w+\b)(\s+\1\b)+/g, '$1');
+        
+        // Update the element content (timestamp + icon + all accumulated text)
+        this.currentStreamElement.textContent = `[${this.streamStartTime}] 🤖 ${this.streamBuffer}`;
+        
+        // Auto-scroll to bottom
+        streamContent.scrollTop = streamContent.scrollHeight;
+      }
+      
+      // Check if we need to start a new line (look for natural break points)
+      if (this.streamBuffer.includes('. ') && this.streamBuffer.length > 200) {
+        // Close current stream and prepare for next
+        this.finalizeStreaming();
+      }
+    }
+
+    finalizeStreaming() {
+      // Close any active streaming element
+      if (this.currentStreamElement) {
+        this.currentStreamElement = null;
+        this.streamBuffer = '';
+        this.streamStartTime = null;
+      }
+    }
+
+    async loadRecentThoughts() {
+      try {
+        const response = await fetch(`${this.apiUrl}/api/thoughts?limit=20`);
+        const data = await response.json();
+        
+        if (data.thoughts && data.thoughts.length > 0) {
+          this.addToStream(`📋 Loading ${data.thoughts.length} recent agent thoughts...`);
+          
+          // Reverse to show oldest first, then newest
+          const thoughts = data.thoughts.reverse();
+          
+          for (const thought of thoughts) {
+            const timestamp = new Date(thought.timestamp).toLocaleTimeString();
+            let icon = '🤖';
+            let messageType = 'response';
+            
+            if (thought.type === 'agent_thought') {
+              icon = '💭';
+              messageType = 'thought';
+            } else if (thought.type === 'tool_use') {
+              icon = '🔧';
+              messageType = 'tool';
+            }
+            
+            // Add historical message with original timestamp
+            const streamContent = document.getElementById('streamContent');
+            const streamLine = document.createElement('div');
+            streamLine.className = `stream-line stream-${messageType} stream-historical`;
+            streamLine.textContent = `[${timestamp}] ${icon} ${thought.content}`;
+            streamContent.appendChild(streamLine);
+          }
+          
+          this.addToStream('📋 Historical thoughts loaded - new messages will appear below');
+        }
+      } catch (error) {
+        console.error('Failed to load recent thoughts:', error);
+        this.addToStream('❌ Failed to load historical thoughts');
       }
     }
 
@@ -618,47 +797,105 @@
 
   // Update persona display
   function updatePersonaDisplay(persona) {
-    const personas = {
-      explorer: "Explorer - Adventurous spirit who loves discovering new places",
-      cautious: "Cautious - Thoughtful observer who moves deliberately", 
-      social: "Social - Outgoing character who seeks interaction",
-      wanderer: "Wanderer - A dreamy soul who sees magic in everything",
-      guardian: "Guardian - Watchful protector focused on safety"
+    const personaInfo = {
+      urban_philosopher: {
+        name: "ALEX - URBAN PHILOSOPHER",
+        tagline: "26-year-old NYC resident exploring with philosophical curiosity ↕",
+        profile: "Alex - 26-year-old NYC philosopher who sees deeper meaning in everyday experiences",
+        background: "Philosophy degree graduate living in New York City. Currently outside exploring the urban landscape with curiosity and wonder.",
+        traits: "Frequently philosophizes about life, human nature, and meaning of everyday experiences. Sees deeper connections in mundane things. References philosophical concepts in conversation."
+      },
+      street_artist: {
+        name: "SAM - STREET ARTIST", 
+        tagline: "28-year-old Brooklyn artist seeking urban inspiration ↕",
+        profile: "Sam - 28-year-old Brooklyn street artist seeking inspiration and new canvases",
+        background: "Creative street artist from Brooklyn who views the city as their canvas. Currently outside looking for new spots and artistic inspiration.",
+        traits: "Observes colors, textures, and urban beauty others miss. Strong opinions about creativity, authenticity, and art's power to change communities. Speaks passionately about craft."
+      },
+      night_wanderer: {
+        name: "RIVER - NIGHT WANDERER",
+        tagline: "24-year-old insomniac finding beauty in solitude ↕", 
+        profile: "River - 24-year-old insomniac finding beauty in solitude and empty city streets",
+        background: "Insomniac who finds peace in late-night city walks. Outside during quiet hours, observing how different the world feels after dark.",
+        traits: "Introspective and melancholic, finding beauty in solitude. Thinks about lives behind lit windows and wonders about strangers' stories."
+      },
+      urban_explorer: {
+        name: "CASEY - URBAN EXPLORER",
+        tagline: "30-year-old photographer exploring hidden city corners ↕",
+        profile: "Casey - 30-year-old photographer exploring forgotten places and hidden city corners", 
+        background: "Urban explorer and photographer searching for abandoned places, rooftops, and hidden corners most people never see.",
+        traits: "Fearless about climbing and exploring, driven by curiosity about forgotten spaces. Documents everything and loves sharing discoveries."
+      }
     };
     
-    const personaText = document.getElementById('currentPersonaText');
-    if (personaText) {
-      personaText.textContent = personas[persona] || personas.explorer;
-    }
+    const info = personaInfo[persona] || personaInfo.urban_philosopher;
+    
+    // Update persona tab elements
+    const personaName = document.querySelector('.persona-name');
+    const personaTagline = document.querySelector('.persona-tagline');
+    const currentPersonaText = document.getElementById('currentPersonaText');
+    const backgroundText = document.querySelector('.persona-section:nth-child(2) .section-text');
+    const traitsText = document.querySelector('.persona-section:nth-child(3) .section-text');
+    
+    if (personaName) personaName.textContent = info.name;
+    if (personaTagline) personaTagline.textContent = info.tagline;
+    if (currentPersonaText) currentPersonaText.textContent = info.profile;
+    if (backgroundText) backgroundText.textContent = info.background;
+    if (traitsText) traitsText.textContent = info.traits;
   }
 
   // Wire up Run Turn functionality
   const runTurnBtn = document.getElementById('runTurnBtn');
   const promptInput = document.getElementById('promptInput');
-  const personaSelect = document.getElementById('personaSelect');
 
-  if (runTurnBtn && promptInput) {
-    runTurnBtn.addEventListener('click', async () => {
-      const prompt = promptInput.value.trim();
-      const persona = personaSelect ? personaSelect.value : 'explorer';
-      
-      if (!prompt) {
-        showToast('Please enter a prompt');
-        return;
-      }
+  // Function to switch tabs programmatically
+  function switchToTab(tabId) {
+    const controlPanel = document.getElementById('controlPanel');
+    if (!controlPanel) return;
+    
+    // Remove active from all tab buttons and tabs
+    for (const b of controlPanel.querySelectorAll('.tab-btn')) b.classList.remove('active');
+    for (const t of controlPanel.querySelectorAll('.tab')) t.classList.remove('active');
+    
+    // Find and activate the target tab button
+    const targetBtn = controlPanel.querySelector(`[data-tab="${tabId}"]`);
+    if (targetBtn) targetBtn.classList.add('active');
+    
+    // Activate the target tab content
+    const tabEl = controlPanel.querySelector('#' + tabId);
+    if (tabEl) tabEl.classList.add('active');
+  }
 
-      runTurnBtn.disabled = true;
-      runTurnBtn.textContent = '⏳ Running...';
+  // Function to submit command
+  async function submitCommand() {
+    const prompt = promptInput.value.trim();
+    const persona = 'urban_philosopher'; // Default persona
+    
+    if (!prompt) {
+      showToast('Please enter a message');
+      return;
+    }
+
+    // Switch to Stream tab immediately
+    switchToTab('t-stream');
+    
+    // Clear input and disable button temporarily
+    promptInput.value = '';
+    runTurnBtn.disabled = true;
+    runTurnBtn.textContent = '⏳ Sending...';
+    
+    try {
+      strandsClient.addToStream(`📤 Sending: ${prompt}`);
+      const result = await strandsClient.startTurn(prompt, persona);
       
-      try {
-        strandsClient.addToStream(`Starting turn: ${prompt}`);
-        const result = await strandsClient.startTurn(prompt, persona);
-        showToast(`Command queued: ${result.command_id}`);
-        
-        // Update persona display
-        updatePersonaDisplay(persona);
-        
-        // Poll for status updates with faster initial polling
+      // Re-enable button
+      runTurnBtn.disabled = false;
+      runTurnBtn.textContent = '▶️ Run Turn';
+      
+      // Update persona display
+      updatePersonaDisplay(persona);
+      
+      // Poll for status updates with faster initial polling
         let pollCount = 0;
         const pollStatus = async () => {
           try {
@@ -672,14 +909,14 @@
               setTimeout(pollStatus, interval);
             } else {
               runTurnBtn.disabled = false;
-              runTurnBtn.textContent = '🎮 Run Turn';
+              runTurnBtn.textContent = '▶️ Run Turn';
               strandsClient.addToStream(`🏁 Polling completed after ${pollCount} checks`);
             }
           } catch (error) {
             console.error('Failed to poll status:', error);
             strandsClient.addToStream(`❌ Polling error: ${error.message}`);
             runTurnBtn.disabled = false;
-            runTurnBtn.textContent = '🎮 Run Turn';
+            runTurnBtn.textContent = '▶️ Run Turn';
           }
         };
         
@@ -690,17 +927,23 @@
         showToast(`Turn failed: ${error.message}`);
         strandsClient.addToStream(`Turn failed: ${error.message}`);
         runTurnBtn.disabled = false;
-        runTurnBtn.textContent = '🎮 Run Turn';
+        runTurnBtn.textContent = '▶️ Run Turn';
+      }
+    }
+
+  if (runTurnBtn && promptInput) {
+    // Click handler
+    runTurnBtn.addEventListener('click', submitCommand);
+    
+    // Enter key handler
+    promptInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault(); // Prevent line break
+        submitCommand();
       }
     });
   }
 
-  // Update persona when selection changes
-  if (personaSelect) {
-    personaSelect.addEventListener('change', () => {
-      updatePersonaDisplay(personaSelect.value);
-    });
-  }
 
   // Video player setup (from original)
   const urlParams = new URLSearchParams(window.location.search);
@@ -750,7 +993,25 @@
 
   // Initialize
   strandsClient.addToStream('Strands Agent Client initialized');
-  updatePersonaDisplay('explorer');
+  updatePersonaDisplay('urban_philosopher');
+  
+  // Setup queue toggle functionality
+  const queueHeader = document.querySelector('.queue-header');
+  const toggleQueue = document.getElementById('toggleQueue');
+  const queueList = document.getElementById('queueList');
+  
+  if (queueHeader && toggleQueue) {
+    queueHeader.addEventListener('click', () => {
+      strandsClient.queueData.isQueueExpanded = !strandsClient.queueData.isQueueExpanded;
+      if (strandsClient.queueData.isQueueExpanded) {
+        queueList.style.display = 'block';
+        toggleQueue.textContent = '▲';
+      } else {
+        queueList.style.display = 'none';
+        toggleQueue.textContent = '▼';
+      }
+    });
+  }
 
 })();
 </script>

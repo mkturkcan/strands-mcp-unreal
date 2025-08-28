@@ -304,7 +304,12 @@ class TurnBasedAgent:
             # Add persona context if provided
             context_prompt = self.current_turn.prompt
             if persona_traits:
-                persona_context = f"You are embodying this persona: {json.dumps(persona_traits)}. "
+                if isinstance(persona_traits, dict) and 'persona' in persona_traits:
+                    # New detailed persona format
+                    persona_context = f"{persona_traits['persona']} "
+                else:
+                    # Legacy format fallback
+                    persona_context = f"You are embodying this persona: {json.dumps(persona_traits)}. "
                 context_prompt = persona_context + context_prompt
             
             # Add environment context

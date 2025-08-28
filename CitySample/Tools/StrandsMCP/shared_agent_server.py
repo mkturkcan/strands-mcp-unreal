@@ -13,7 +13,7 @@ import asyncio
 import threading
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass, asdict
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue, Empty
@@ -40,41 +40,197 @@ except ImportError:
     from pydantic import BaseModel
     import uvicorn
 
+try:
+    import boto3
+    from botocore.exceptions import ClientError
+except ImportError:
+    print("Installing boto3...")
+    subprocess.run([sys.executable, "-m", "pip", "install", "boto3"])
+    import boto3
+    from botocore.exceptions import ClientError
+
 from turn_based_agent import TurnBasedAgent
+
+# DynamoDB Manager for persisting agent thoughts
+class DynamoDBManager:
+    """Handles DynamoDB operations for storing agent thoughts and responses"""
+    
+    def __init__(self, table_name: str = "strands-agent-thoughts", region: str = "us-east-1"):
+        self.table_name = table_name
+        self.region = region
+        self.dynamodb = None
+        self.table = None
+        
+        try:
+            self.dynamodb = boto3.resource('dynamodb', region_name=region)
+            self.table = self.dynamodb.Table(table_name)
+            print(f"Connected to DynamoDB table: {table_name}")
+        except Exception as e:
+            print(f"Failed to connect to DynamoDB: {e}")
+    
+    def save_thought(self, content: str, thought_type: str, session_id: str = "global-shared", command_id: str = None):
+        """Save an agent thought to DynamoDB"""
+        if not self.table:
+            return False
+            
+        try:
+            item = {
+                'id': str(uuid.uuid4()),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'session_id': session_id,
+                'content': content,
+                'type': thought_type,  # 'agent_thought', 'agent_response', 'tool_use'
+                'ttl': int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())  # Auto-expire after 30 days
+            }
+            
+            if command_id:
+                item['command_id'] = command_id
+                
+            self.table.put_item(Item=item)
+            return True
+        except Exception as e:
+            print(f"Failed to save thought to DynamoDB: {e}")
+            return False
+    
+    def get_recent_thoughts(self, limit: int = 50, session_id: str = "global-shared"):
+        """Get recent thoughts from DynamoDB"""
+        if not self.table:
+            return []
+            
+        try:
+            response = self.table.query(
+                IndexName='session-timestamp-index',  # We'll need to create this GSI
+                KeyConditionExpression=boto3.dynamodb.conditions.Key('session_id').eq(session_id),
+                ScanIndexForward=False,  # Most recent first
+                Limit=limit
+            )
+            return response.get('Items', [])
+        except Exception as e:
+            print(f"Failed to get thoughts from DynamoDB: {e}")
+            # Fallback to scan if GSI doesn't exist
+            try:
+                response = self.table.scan(
+                    FilterExpression=boto3.dynamodb.conditions.Attr('session_id').eq(session_id),
+                    Limit=limit
+                )
+                items = response.get('Items', [])
+                # Sort by timestamp descending
+                items.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+                return items[:limit]
+            except Exception as e2:
+                print(f"Failed to scan DynamoDB: {e2}")
+                return []
 
 # Custom callback handler for streaming thoughts
 class WebSocketCallbackHandler:
     """Custom callback handler that broadcasts agent thoughts via WebSocket"""
     
-    def __init__(self, agent_manager):
+    def __init__(self, agent_manager, dynamodb_manager: Optional[DynamoDBManager] = None):
         self.agent_manager = agent_manager
+        self.dynamodb_manager = dynamodb_manager
         self.tool_count = 0
         self.previous_tool_use = None
+        self.accumulated_response = ""  # Track accumulated response text
+        self.last_sent_length = 0  # Track how much we've sent
         
     def __call__(self, **kwargs):
         """Handle streaming events from the Strands agent"""
         try:
-            reasoningText = kwargs.get("reasoningText", False)
+            # Handle different streaming formats
+            event = kwargs.get("event")
             data = kwargs.get("data", "")
             complete = kwargs.get("complete", False)
             current_tool_use = kwargs.get("current_tool_use", {})
+            reasoningText = kwargs.get("reasoningText", False)
             
-            print(f"WebSocketCallbackHandler called with kwargs: {list(kwargs.keys())}")
-            if len(str(kwargs)) < 200:
-                print(f"Full kwargs: {kwargs}")
+            # Handle new streaming event format
+            if event:
+                if "contentBlockDelta" in event:
+                    delta = event["contentBlockDelta"]["delta"]
+                    if "text" in delta:
+                        text_content = delta["text"]
+                        if text_content and text_content.strip():  # Only broadcast non-empty, non-whitespace text
+                            # Accumulate the response text
+                            self.accumulated_response += text_content
+                            
+                            # Only send new text since last broadcast
+                            new_text = self.accumulated_response[self.last_sent_length:]
+                            if new_text and len(new_text) > 3:  # Only send if we have substantial new content
+                                message = {
+                                    "type": "agent_response",
+                                    "content": new_text,
+                                    "complete": False,
+                                    "timestamp": datetime.now(timezone.utc).isoformat()
+                                }
+                                asyncio.create_task(self.agent_manager.broadcast_update(message))
+                                self.last_sent_length = len(self.accumulated_response)
+                                
+                                # Save to DynamoDB (but don't save every tiny fragment)
+                                if self.dynamodb_manager and len(new_text) > 10:
+                                    self.dynamodb_manager.save_thought(
+                                        content=new_text,
+                                        thought_type="agent_response"
+                                    )
+                    
+                    # Check for reasoning content in the delta
+                    if "reasoningContent" in delta:
+                        reasoning = delta["reasoningContent"]
+                        if "text" in reasoning and reasoning["text"]:
+                            thought_message = {
+                                "type": "agent_thought",
+                                "content": reasoning["text"],
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }
+                            asyncio.create_task(self.agent_manager.broadcast_update(thought_message))
+                            
+                            # Save to DynamoDB
+                            if self.dynamodb_manager:
+                                self.dynamodb_manager.save_thought(
+                                    content=reasoning["text"],
+                                    thought_type="agent_thought"
+                                )
+                
+                elif "contentBlockStart" in event:
+                    # Handle content block start - might contain reasoning info
+                    start_info = event["contentBlockStart"].get("start", {})
+                    if start_info.get("type") == "reasoning":
+                        print("Reasoning content block started")
+                
+                elif "messageStop" in event:
+                    # Send any remaining content
+                    if self.last_sent_length < len(self.accumulated_response):
+                        remaining_text = self.accumulated_response[self.last_sent_length:]
+                        if remaining_text.strip():
+                            asyncio.create_task(self.agent_manager.broadcast_update({
+                                "type": "agent_response",
+                                "content": remaining_text,
+                                "complete": False,
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }))
+                    
+                    # Send completion message
+                    asyncio.create_task(self.agent_manager.broadcast_update({
+                        "type": "agent_response_complete",
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }))
+                    
+                    # Reset for next message
+                    self.accumulated_response = ""
+                    self.last_sent_length = 0
+                    print("Message completed")
+                    
+                return  # Early return for event-based handling
             
-            # Broadcast reasoning text (agent's thoughts)
-            if reasoningText:
-                print(f"Broadcasting agent thought: {reasoningText[:100]}...")
+            # Handle legacy callback format (avoid duplication)
+            if reasoningText and reasoningText.strip():
                 asyncio.create_task(self.agent_manager.broadcast_update({
-                    "type": "agent_thought",
+                    "type": "agent_thought", 
                     "content": reasoningText,
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }))
             
-            # Broadcast response data
-            if data:
-                print(f"Broadcasting agent response: {data[:100]}...")
+            # Only broadcast legacy data if no event format was handled
+            if data and data.strip() and not event:
                 asyncio.create_task(self.agent_manager.broadcast_update({
                     "type": "agent_response",
                     "content": data,
@@ -82,13 +238,11 @@ class WebSocketCallbackHandler:
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }))
             
-            # Broadcast tool usage
             if current_tool_use and current_tool_use.get("name"):
                 tool_name = current_tool_use.get("name", "Unknown tool")
                 if self.previous_tool_use != current_tool_use:
                     self.previous_tool_use = current_tool_use
                     self.tool_count += 1
-                    print(f"Broadcasting tool use: {tool_name}")
                     asyncio.create_task(self.agent_manager.broadcast_update({
                         "type": "tool_use",
                         "tool_name": tool_name,
@@ -139,6 +293,9 @@ class SharedAgentManager:
         self.command_history: List[QueuedCommand] = []
         self.total_processed = 0
         
+        # Initialize DynamoDB manager
+        self.dynamodb_manager = DynamoDBManager()
+        
         # Start the command processor thread
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.processor_future = self.executor.submit(self._process_command_queue)
@@ -146,8 +303,8 @@ class SharedAgentManager:
     def initialize_agent(self):
         """Initialize the shared global agent"""
         if not self.global_agent:
-            # Create WebSocket callback handler for streaming thoughts
-            websocket_callback = WebSocketCallbackHandler(self)
+            # Create WebSocket callback handler for streaming thoughts with DynamoDB persistence
+            websocket_callback = WebSocketCallbackHandler(self, self.dynamodb_manager)
             
             self.global_agent = TurnBasedAgent(
                 session_id="global-shared-agent",
@@ -155,7 +312,7 @@ class SharedAgentManager:
                 s3_bucket=os.getenv("STRANDS_S3_BUCKET"),
                 callback_handler=websocket_callback
             )
-            print("Global shared agent initialized with WebSocket streaming")
+            print("Global shared agent initialized with WebSocket streaming and DynamoDB persistence")
     
     async def add_command(self, prompt: str, persona_traits: Optional[Dict] = None, 
                          priority: int = 0, submitted_by: Optional[str] = None) -> str:
@@ -422,6 +579,24 @@ async def get_history():
     return {
         "history": history,
         "total_commands": len(history),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@app.get("/api/thoughts")
+async def get_agent_thoughts(limit: int = 50):
+    """Get recent agent thoughts from DynamoDB"""
+    if not shared_manager.dynamodb_manager or not shared_manager.dynamodb_manager.table:
+        return {
+            "thoughts": [],
+            "total": 0,
+            "message": "DynamoDB not available",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    
+    thoughts = shared_manager.dynamodb_manager.get_recent_thoughts(limit=limit)
+    return {
+        "thoughts": thoughts,
+        "total": len(thoughts),
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
