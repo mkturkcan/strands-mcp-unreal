@@ -177,7 +177,7 @@
     .queue-item { padding: 4px 12px; font-size: 11px; color: #9fb0c0; border-bottom: 1px solid rgba(255,255,255,0.02); }
     .queue-empty { padding: 6px 12px; font-size: 11px; color: #666; font-style: italic; }
     .stream-content { flex: 1; padding: 12px; overflow-y: auto; max-height: 50vh; background: rgba(5,5,5,0.8); border-radius: 6px; margin: 8px; }
-    .stream-line { font-size: 13px; color: var(--text); line-height: 1.5; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; margin-bottom: 8px; }
+    .stream-line { font-size: 13px; color: var(--text); line-height: 1.5; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace; margin-bottom: 8px; white-space: pre-wrap; word-break: break-word; }
     .stream-thought { color: #a855f7; font-style: italic; }
     .stream-response { color: #36d38c; font-weight: 500; }
     .stream-tool { color: #f59e0b; }
@@ -316,8 +316,8 @@
   // Strands Agent Integration
   class StrandsAgentClient {
     constructor() {
-      // Use local development server
-      this.apiUrl = 'http://localhost:8002';
+      // Use remote API server
+      this.apiUrl = 'https://api.thedimessquare.com';
       this.websocket = null;
       this.sessionId = this.generateSessionId();
       this.currentTurn = null;
@@ -336,6 +336,10 @@
         queue: [],
         isQueueExpanded: false
       };
+      
+      // Debouncing for streaming
+      this.pendingChunk = '';
+      this.flushTimer = null;
     }
 
     generateSessionId() {
@@ -647,65 +651,77 @@
     }
 
     handleStreamingResponse(content) {
-      const streamContent = document.getElementById('streamContent');
-      
-      // Clean the content
-      const cleanContent = content.trim();
-      if (!cleanContent) return;
-      
-      // If this is the start of a new response stream
-      if (!this.currentStreamElement) {
-        // Create new streaming element with timestamp
-        this.currentStreamElement = document.createElement('div');
-        this.currentStreamElement.className = 'stream-line stream-response';
-        this.streamStartTime = new Date().toLocaleTimeString();
-        this.currentStreamElement.textContent = `[${this.streamStartTime}] 🤖 `;
-        this.streamBuffer = '';
-        this.wordSet = new Set(); // Track words we've seen
-        streamContent.appendChild(this.currentStreamElement);
-      }
-      
-      // Word-by-word deduplication approach
-      const newWords = cleanContent.split(/(\s+|[^\w\s]+)/); // Split on whitespace and punctuation
-      let addedContent = '';
-      
-      for (const word of newWords) {
-        if (!word.trim()) {
-          // Always add whitespace/punctuation
-          addedContent += word;
-        } else {
-          // For actual words, check if we haven't seen this sequence recently
-          const wordKey = word.toLowerCase();
-          const recentBuffer = this.streamBuffer.slice(-100); // Last 100 chars
-          
-          // Only add if this word isn't duplicated at the end of recent buffer
-          if (!recentBuffer.toLowerCase().includes(wordKey + ' ' + wordKey) && 
-              !recentBuffer.toLowerCase().endsWith(wordKey)) {
-            addedContent += word;
-            this.wordSet.add(wordKey);
+      // 0) Basic guards
+      if (typeof content !== 'string' || !content) return;
+
+      // 1) Normalize incoming to avoid false mismatches
+      let incoming = content
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-widths
+        .replace(/\r\n?/g, '\n');              // CRLF → LF
+
+      // 2) Debounce micro-chunks to avoid "* l *" flicker
+      this.pendingChunk += incoming;
+      if (this.flushTimer) return;
+      this.flushTimer = setTimeout(() => {
+        const chunk = this.pendingChunk;
+        this.pendingChunk = '';
+        this.flushTimer = null;
+
+        const streamContent = document.getElementById('streamContent');
+
+        // Start line if needed
+        if (!this.currentStreamElement) {
+          this.currentStreamElement = document.createElement('div');
+          this.currentStreamElement.className = 'stream-line stream-response';
+          this.streamStartTime = new Date().toLocaleTimeString();
+          this.currentStreamElement.textContent = `[${this.streamStartTime}] 🤖 `;
+          this.streamBuffer = '';
+          streamContent.appendChild(this.currentStreamElement);
+        }
+
+        // 3) Fast path: if the whole chunk already appears near the end, skip (echo)
+        const recent = this.streamBuffer.slice(-2000);
+        if (recent.includes(chunk)) {
+          // exact echo of a recent slice; ignore
+          return;
+        }
+
+        // 4) Robust overlap merge (handles cumulative & partial deltas)
+        let segment = chunk;
+        if (this.streamBuffer.length > 0) {
+          const searchWindow = this.streamBuffer.slice(-2000); // windowed for perf
+          // (a) if our search window is a strict prefix of the new segment, catch that
+          if (segment.startsWith(searchWindow)) {
+            segment = segment.slice(searchWindow.length);
+          } else {
+            // (b) general suffix(prefix) overlap
+            const maxOverlap = Math.min(1000, searchWindow.length, segment.length);
+            let overlap = 0;
+            for (let i = maxOverlap; i > 0; i--) {
+              if (searchWindow.endsWith(segment.slice(0, i))) { overlap = i; break; }
+            }
+            segment = segment.slice(overlap);
           }
         }
-      }
-      
-      // Only update if we have new content
-      if (addedContent.trim()) {
-        this.streamBuffer += addedContent;
-        
-        // Clean up obvious duplications in the final buffer
-        this.streamBuffer = this.streamBuffer.replace(/(\b\w+\b)(\s+\1\b)+/g, '$1');
-        
-        // Update the element content (timestamp + icon + all accumulated text)
+
+        // 5) Append (no boundary-space heuristic; avoids "embedde d")
+        this.streamBuffer += segment;
+
+        // 6) Light punctuation spacing (preserves ellipses)
+        this.streamBuffer = this.streamBuffer
+          .replace(/([.!?])(?![.!?])(\S)/g, '$1 $2')   // "word.Word" → "word. Word" but keeps "..." intact
+          .replace(/([,;:])(?![,;:])(\S)/g, '$1 $2')   // "word,Word" → "word, Word" but keeps ",," intact
+          .replace(/\*(\S)/g, '* $1')                  // "*word" → "* word"
+          .replace(/(\S)\*/g, '$1 *');                 // "word*" → "word *"
+
+        // 7) Render
         this.currentStreamElement.textContent = `[${this.streamStartTime}] 🤖 ${this.streamBuffer}`;
-        
-        // Auto-scroll to bottom
-        streamContent.scrollTop = streamContent.scrollHeight;
-      }
-      
-      // Check if we need to start a new line (look for natural break points)
-      if (this.streamBuffer.includes('. ') && this.streamBuffer.length > 200) {
-        // Close current stream and prepare for next
-        this.finalizeStreaming();
-      }
+
+        // Optional: split long lines
+        if (this.streamBuffer.includes('. ') && this.streamBuffer.length > 200) {
+          this.finalizeStreaming();
+        }
+      }, 50); // 40–60ms is a sweet spot
     }
 
     finalizeStreaming() {
