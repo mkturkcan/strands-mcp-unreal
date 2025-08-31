@@ -37,6 +37,12 @@
 # Large zip files (> 100MB GitHub limit)
 CitySample_HoudiniFiles.zip
 
+# External tool archives
+win-acme/
+win-acme.zip
+nginx-*/
+nginx-*.zip
+
 # ===== KEEP STRANDS-SPECIFIC COMPONENTS =====
 # Core Strands directories and files (force include with !)
 !CitySample/Tools/StrandsMCP/
