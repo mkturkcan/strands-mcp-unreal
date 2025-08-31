@@ -76,3 +76,10 @@ PowerShell script to easily run the Strands MCP Persona Agent in Unreal Engine.
 - Unreal Engine project with Strands MCP tools
 - Python environment in `MyProject/Intermediate/PipInstall/`
 - PowerShell execution policy allowing scripts
+
+## External Tools
+
+To keep this repository lightweight, binary packages such as
+`win-acme` (for certificate management) and `nginx` are not
+included. Download and install them separately if your workflow
+requires them.
