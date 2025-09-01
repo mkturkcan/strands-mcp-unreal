@@ -291,15 +291,19 @@
 			"Name": "AutomatedPerfTesting",
 			"Enabled": true
 		},
-		{
-			"Name": "FastGeoStreaming",
-			"Enabled": true
-		},
-		{
-			"Name": "StrandsInputServer",
-			"Enabled": true,
-			"SupportedTargetPlatforms": [
-				"Win64",
+                {
+                        "Name": "FastGeoStreaming",
+                        "Enabled": true
+                },
+                {
+                        "Name": "PixelStreaming",
+                        "Enabled": true
+                },
+                {
+                        "Name": "StrandsInputServer",
+                        "Enabled": true,
+                        "SupportedTargetPlatforms": [
+                                "Win64",
 				"Linux"
 			]
 		}
