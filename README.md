@@ -8,6 +8,16 @@ PowerShell script to easily run the Strands MCP Persona Agent in Unreal Engine.
 .\run_persona.ps1
 ```
 
+### Multi-Agent Demo
+
+To launch three simultaneous personas controlling separate Unreal agents:
+
+```powershell
+./run_multi_agent_demo.ps1
+```
+
+This spawns Explorer, Guardian, and Dreamer personas targeting agent IDs `agent-1`, `agent-2`, and `agent-3` respectively.
+
 ## Commands
 
 ### Basic Usage
