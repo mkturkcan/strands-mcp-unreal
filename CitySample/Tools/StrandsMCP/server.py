@@ -51,62 +51,80 @@ mcp = FastMCP("Strands Input MCP Server", json_response=True, host="0.0.0.0")
 
 # Define tools mirroring Tools/StrandsInputClient/send_cmd.py
 
-@mcp.tool(description="Move the character. forward/right in [-1..1]. Optional duration seconds.")
+@mcp.tool(description="Move the character. forward/right in [-1..1]. Optional duration seconds and agent id.")
 def move(
     forward: float = 0.0,
     right: float = 0.0,
     duration: Optional[float] = None,
+    agent_id: Optional[str] = None,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {"cmd": "move", "forward": forward, "right": right}
     if duration is not None:
         payload["duration"] = duration
+    if agent_id is not None:
+        payload["id"] = agent_id
     return safe_send(host, port, payload)
 
-@mcp.tool(description="Look around. yawRate/pitchRate in deg/sec. Optional duration seconds.")
+@mcp.tool(description="Look around. yawRate/pitchRate in deg/sec. Optional duration seconds and agent id.")
 def look(
     yawRate: float = 0.0,
     pitchRate: float = 0.0,
     duration: Optional[float] = None,
+    agent_id: Optional[str] = None,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {"cmd": "look", "yawRate": yawRate, "pitchRate": pitchRate}
     if duration is not None:
         payload["duration"] = duration
+    if agent_id is not None:
+        payload["id"] = agent_id
     return safe_send(host, port, payload)
 
-@mcp.tool(description="Jump once.")
+@mcp.tool(description="Jump once. Optional agent id.")
 def jump(
+    agent_id: Optional[str] = None,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
 ) -> Dict[str, Any]:
-    return safe_send(host, port, {"cmd": "jump"})
+    payload: Dict[str, Any] = {"cmd": "jump"}
+    if agent_id is not None:
+        payload["id"] = agent_id
+    return safe_send(host, port, payload)
 
-@mcp.tool(description="Toggle sprint.")
+@mcp.tool(description="Toggle sprint. Optional agent id.")
 def sprint(
     enabled: bool,
+    agent_id: Optional[str] = None,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
 ) -> Dict[str, Any]:
-    return safe_send(host, port, {"cmd": "sprint", "enabled": bool(enabled)})
+    payload: Dict[str, Any] = {"cmd": "sprint", "enabled": bool(enabled)}
+    if agent_id is not None:
+        payload["id"] = agent_id
+    return safe_send(host, port, payload)
 
-@mcp.tool(description="Request Unreal to save a screenshot to disk. Optional path and showUI.")
+@mcp.tool(description="Request Unreal to save a screenshot to disk. Optional path, showUI, and agent id.")
 def screenshot(
     path: Optional[str] = None,
     showUI: bool = False,
+    agent_id: Optional[str] = None,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
 ) -> Dict[str, Any]:
     payload: Dict[str, Any] = {"cmd": "screenshot", "showUI": bool(showUI)}
     if path:
         payload["path"] = path
+    if agent_id is not None:
+        payload["id"] = agent_id
     return safe_send(host, port, payload)
 
-@mcp.tool(description="Capture a compact world/agent state snapshot to JSON and return it.")
+@mcp.tool(description="Capture a compact world/agent state snapshot to JSON and return it. Optional agent id.")
 def sense(
     path: Optional[str] = None,
+    agent_id: Optional[str] = None,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
 ) -> Dict[str, Any]:
@@ -119,7 +137,11 @@ def sense(
 
     # Trigger state export in Unreal and wait for file
     t = time.time()
-    res = safe_send(host, port, {"cmd": "state", "path": str(out_path)})
+    payload: Dict[str, Any] = {"cmd": "state", "path": str(out_path)}
+    if agent_id is not None:
+        payload["id"] = agent_id
+
+    res = safe_send(host, port, payload)
     if res.get("status") != "ok":
         return {"status": "error", "error": "send_failed", "detail": res}
 

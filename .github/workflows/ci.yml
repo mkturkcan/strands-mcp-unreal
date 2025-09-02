@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    - name: Run syntax checks
+      run: |
+        python -m py_compile CitySample/Tools/StrandsMCP/server.py CitySample/Tools/StrandsMCP/persona_agent.py

@@ -15,6 +15,7 @@ Contents:
 ## Prereqs on the Windows box (local machine with Unreal)
 - Unreal running with the StrandsInputServer plugin (listening on TCP 127.0.0.1:17777).
 - MCP server running: `python Tools/StrandsMCP/server.py` (HTTP SSE on http://localhost:8000/mcp).
+- Each MCP tool now accepts an optional `agent_id` parameter so commands can target specific Unreal agents (e.g. `move(agent_id="agent-1", forward=1.0)`).
 - Python environment that can import:
   - `mcp`, `anyio`, `httpx` (already available via UE PipInstall).
   - `strands` (already available via UE PipInstall).

@@ -43,6 +43,20 @@ from strands.tools.mcp.mcp_client import MCPClient
 from strands.session.file_session_manager import FileSessionManager
 from strands.hooks import BeforeInvocationEvent, AfterInvocationEvent, HookProvider
 
+
+class AgentIdHook(HookProvider):
+    """Injects an agent_id into every MCP tool invocation."""
+
+    def __init__(self, agent_id: str) -> None:
+        self.agent_id = agent_id
+
+    def before_invocation(self, event: BeforeInvocationEvent) -> BeforeInvocationEvent:
+        event.arguments["agent_id"] = self.agent_id
+        return event
+
+    def after_invocation(self, event: AfterInvocationEvent) -> AfterInvocationEvent:  # pragma: no cover - passthrough
+        return event
+
 try:
     import boto3  # type: ignore
 except Exception:
@@ -345,6 +359,7 @@ def main():
     parser.add_argument("--load-state", help="Path to previous state file to load")
     parser.add_argument("--use-s3", action="store_true", help="Use S3 for state persistence")
     parser.add_argument("--mcp-url", default=os.environ.get("MCP_URL", "http://localhost:8000/mcp"))
+    parser.add_argument("--agent-id", help="Route commands to a specific Unreal agent")
     
     args = parser.parse_args()
     
@@ -372,11 +387,12 @@ def main():
             session_manager = FileSessionManager(session_id=persona.session_id)
             
             # Create agent with persona's prompt
+            agent_hooks = [AgentIdHook(args.agent_id)] if args.agent_id else []
             agent = Agent(
                 tools=filtered_tools,
                 session_manager=session_manager,
-system_prompt="You've just been instantiated into this reality. Do whatever you want.",
-                hooks=[]
+                system_prompt="You've just been instantiated into this reality. Do whatever you want.",
+                hooks=agent_hooks,
             )
             
             print(f"Starting {persona.persona_name}'s lifecycle for {args.duration} seconds...")
