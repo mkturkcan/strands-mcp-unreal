@@ -63,7 +63,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(aws dynamodb create-table:*)",
-      "Bash(aws elbv2 deregister-targets:*)"
+      "Bash(aws elbv2 deregister-targets:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(ln:*)"
     ],
     "deny": []
   }
